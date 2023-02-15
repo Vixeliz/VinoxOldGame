@@ -1,0 +1,13 @@
+[package]
+name = "common"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = {workspace = true}
+bevy_rapier3d = "0.20.0"
+bevy_renet = { workspace = true }
+component = "0.1.0"
+serde = "1.0.152"
