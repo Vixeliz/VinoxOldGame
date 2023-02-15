@@ -6,6 +6,7 @@ use std::time::Duration;
 use belly::prelude::*;
 use bevy::prelude::*;
 use bevy_easings::EasingsPlugin;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use bevy_renet::RenetClientPlugin;
 use components::GameState;
 use iyes_loopless::prelude::*;
@@ -19,6 +20,7 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(BellyPlugin)
         .add_plugin(EasingsPlugin)
+        .add_plugin(WorldInspectorPlugin)
         .add_plugin(RenetClientPlugin::default())
         .add_fixed_timestep(
             Duration::from_millis(16),

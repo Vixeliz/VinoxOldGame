@@ -1,5 +1,5 @@
 use crate::networking::components::Player;
-use bevy::{math::Vec2Swizzles, prelude::*, gltf::Gltf};
+use bevy::{math::Vec2Swizzles, prelude::*, gltf::Gltf, render::primitives::Aabb};
 use bevy_rapier3d::prelude::*;
 
 #[derive(Resource, Default)]
@@ -18,6 +18,7 @@ pub struct ColliderBundle {
 #[derive(Resource, Default)]
 pub struct PlayerBundleBuilder {
     pub default_model: Handle<Scene>,
+    pub model_aabb: Aabb
 }
 
 #[derive(Default, Bundle)]
@@ -35,7 +36,7 @@ impl PlayerBundleBuilder {
     pub fn build(&self, translation: Vec3, id: u64) -> PlayerBundle {
         PlayerBundle {
             collider: ColliderBundle {
-                collider: Collider::cuboid(1., 1., 1.),
+                collider: Collider::cuboid(self.model_aabb.half_extents.x, self.model_aabb.half_extents.y, self.model_aabb.half_extents.z),
                 rigid_body: RigidBody::Dynamic,
                 rotation_constraints: LockedAxes::ROTATION_LOCKED,
                 ..Default::default()

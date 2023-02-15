@@ -1,4 +1,4 @@
-use bevy::{asset::LoadState, prelude::*};
+use bevy::{asset::LoadState, prelude::*, render::primitives::Aabb, math::Vec3A};
 use bevy_rapier3d::prelude::*;
 use common::{
     game::bundles::{AssetsLoading, PlayerBundleBuilder},
@@ -94,10 +94,14 @@ pub fn setup_resources(
     asset_server: Res<AssetServer>,
     mut loading: ResMut<AssetsLoading>,
 ) {
-    let player_handle = asset_server.load("player.gltf");
+    let player_handle = asset_server.load("player.gltf#Scene0");
     loading.0.push(player_handle.clone_untyped());
     commands.insert_resource(PlayerBundleBuilder {
         default_model: player_handle,
+        model_aabb: Aabb {
+            half_extents: Vec3A::new(1.0, 2.0, 0.5),
+            ..default()
+        }
     });
 }
 pub struct LoadingPlugin;
