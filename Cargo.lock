@@ -528,17 +528,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_ecs_tilemap"
-version = "0.9.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7ce7f9fa49f364602ac0901d5f181445529b23fb0623e39e791548f8a6e8c2b5"
-dependencies = [
- "bevy",
- "log",
- "regex",
-]
-
-[[package]]
 name = "bevy_egui"
 version = "0.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1109,6 +1098,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d8c1fef690941d3e7788d328517591fecc684c084084702d6ff1641e993699a"
 
 [[package]]
+name = "bstr"
+version = "0.2.17"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba3569f383e8f1598449f1a423e72e99569137b47740b1da11ef19af3d5c3223"
+dependencies = [
+ "memchr",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1260,12 +1258,13 @@ dependencies = [
  "bevy",
  "bevy-inspector-egui",
  "bevy_easings",
- "bevy_ecs_tilemap",
  "bevy_rapier3d",
  "bevy_renet",
  "bincode",
  "common",
  "iyes_loopless",
+ "mlua",
+ "ron",
  "serde",
 ]
 
@@ -1345,7 +1344,11 @@ dependencies = [
  "bevy_rapier3d",
  "bevy_renet",
  "component",
+ "mlua",
+ "ron",
  "serde",
+ "strum",
+ "walkdir",
 ]
 
 [[package]]
@@ -2575,6 +2578,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "lua-src"
+version = "544.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "708ba3c844d5e9d38def4a09dd871c17c370f519b3c4b7261fbabe4a613a814c"
+dependencies = [
+ "cc",
+]
+
+[[package]]
+name = "luajit-src"
+version = "210.4.5+resty2cf5186"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "27b7992a40e602786272d84c6f2beca44a588ededcfd57b48ec6f82008a7cb97"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "mach"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2679,6 +2700,24 @@ dependencies = [
  "log",
  "wasi 0.11.0+wasi-snapshot-preview1",
  "windows-sys 0.42.0",
+]
+
+[[package]]
+name = "mlua"
+version = "0.8.7"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ee2ad7a9aa69056b148d9d590344bc155d3ce0d2200e3b2838f7034f6ba33c1"
+dependencies = [
+ "bstr",
+ "cc",
+ "erased-serde",
+ "lua-src",
+ "luajit-src",
+ "num-traits",
+ "once_cell",
+ "pkg-config",
+ "rustc-hash",
+ "serde",
 ]
 
 [[package]]
@@ -3636,6 +3675,8 @@ dependencies = [
  "bincode",
  "common",
  "iyes_loopless",
+ "mlua",
+ "ron",
  "serde",
 ]
 
@@ -3803,6 +3844,12 @@ name = "strsim"
 version = "0.10.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
+
+[[package]]
+name = "strum"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "063e6045c0e62079840579a7e47a355ae92f60eb74daaf156fb1e84ba164e63f"
 
 [[package]]
 name = "subtle"

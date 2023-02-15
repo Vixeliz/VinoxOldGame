@@ -52,6 +52,15 @@ pub enum ServerChannel {
     NetworkedEntities,
 }
 
+
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub enum Commands {
+    Interact {
+        entity: Entity,
+        attack: bool
+    },
+}
+
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum ServerMessages {
     PlayerCreate {

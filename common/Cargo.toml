@@ -7,7 +7,11 @@ edition = "2021"
 
 [dependencies]
 bevy = {workspace = true}
-bevy_rapier3d = "0.20.0"
+bevy_rapier3d = {workspace = true}
 bevy_renet = { workspace = true }
 component = "0.1.0"
-serde = "1.0.152"
+serde = {workspace=true}
+mlua = {workspace=true}
+ron = {workspace=true}
+strum = "0.24.1"
+walkdir = "2.3.2"

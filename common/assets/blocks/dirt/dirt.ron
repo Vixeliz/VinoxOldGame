@@ -1,0 +1,20 @@
+BlockDescriptor(
+    namespace: "vinox",
+    block_name: "dirt",
+    textures: {
+    "up": "grass.png",
+    "down": "grass.png",
+    "left": "grass.png",
+    "right": "grass.png",
+    "front": "grass.png",
+    "back": "grass.png",
+    },
+    model: None,
+    interactable: false,
+    friction: 0.5,
+    break_time: 5.0,
+    break_tool: "shovel",
+    walk_sound: Some("dirt_walk.wav"),
+    break_sound: Some("dirt_break.wav"),
+    block_script: Some("dirt.lua")
+)

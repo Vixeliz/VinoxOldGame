@@ -1,0 +1,13 @@
+// Example of how a entity def may look like
+// Entities will be able to use scripts which will expose some api
+// Some entities will require custom code
+Entity(
+    namespace: "vinox",
+    entity_name: "Golem",
+    model: "golem.gltf", // We will allow someone to specify a gltf however i want to build in a few types such as slabs
+    interactable: false,
+    speed: 5,
+    attack: 5,
+    ai_type: "walk",
+    entity_script: Some("grass.lua")
+)

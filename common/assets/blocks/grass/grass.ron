@@ -1,0 +1,23 @@
+// Example of how a block def may look like
+// Blocks will be able to use scripts which will expose some api
+// Some blocks will require custom code
+BlockDescriptor(
+    namespace: "vinox",
+    block_name: "grass",
+    textures: {
+    "up": "grass.png",
+    "down": "grass.png",
+    "left": "grass.png",
+    "right": "grass.png",
+    "front": "grass.png",
+    "back": "grass.png",
+    },
+    model: None, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
+    interactable: false,
+    friction: 0.5,
+    break_time: 5,
+    break_tool: "shovel",
+    walk_sound: Some("grass_walk.wav"),
+    break_sound: Some("grass_break.wav"),
+    block_script: Some("grass.lua")
+)
