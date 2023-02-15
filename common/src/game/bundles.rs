@@ -1,6 +1,6 @@
 use crate::networking::components::Player;
 use bevy::{math::Vec2Swizzles, prelude::*, gltf::Gltf, render::primitives::Aabb};
-use bevy_rapier3d::prelude::*;
+use bevy_rapier3d::{prelude::*, rapier::prelude::InteractionGroups};
 
 #[derive(Resource, Default)]
 pub struct AssetsLoading(pub Vec<HandleUntyped>);
@@ -13,6 +13,7 @@ pub struct ColliderBundle {
     pub friction: Friction,
     pub density: ColliderMassProperties,
     pub rotation_constraints: LockedAxes,
+    pub collision_groups: CollisionGroups
 }
 
 #[derive(Resource, Default)]
@@ -39,6 +40,7 @@ impl PlayerBundleBuilder {
                 collider: Collider::cuboid(self.model_aabb.half_extents.x, self.model_aabb.half_extents.y, self.model_aabb.half_extents.z),
                 rigid_body: RigidBody::Dynamic,
                 rotation_constraints: LockedAxes::ROTATION_LOCKED,
+                collision_groups: CollisionGroups::new(Group::GROUP_1, Group::from_bits_truncate(Group::GROUP_2.bits())),
                 ..Default::default()
             },
             player_tag: Player { id },
