@@ -64,26 +64,29 @@ mod tests {
     }
 }
 
-pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> Vec<BlockType> {
-    let mut result: Vec<BlockType> = Vec::new();
+pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, BlockType> {
+    let mut result = HashMap::new();
     for raw_block in block_descriptor {
-        result.push(BlockType {
-            namespace: raw_block.namespace,
-            block_name: raw_block.block_name,
-            textures: raw_block.textures,
-            model: raw_block.model,
-            interactable: raw_block.interactable,
-            friction: raw_block.friction,
-            break_time: raw_block.break_time,
-            break_tool: BreakTool::from_str(raw_block.break_tool.as_str()).unwrap_or_default(),
-            walk_sound: raw_block.walk_sound,
-            break_sound: raw_block.break_sound,
-            block_script: raw_block.block_script,
-        })
+        result.insert(
+            (raw_block.namespace.to_owned() + raw_block.block_name.as_str()).to_string(),
+            BlockType {
+                namespace: raw_block.namespace,
+                block_name: raw_block.block_name,
+                textures: raw_block.textures,
+                model: raw_block.model,
+                interactable: raw_block.interactable,
+                friction: raw_block.friction,
+                break_time: raw_block.break_time,
+                break_tool: BreakTool::from_str(raw_block.break_tool.as_str()).unwrap_or_default(),
+                walk_sound: raw_block.walk_sound,
+                break_sound: raw_block.break_sound,
+                block_script: raw_block.block_script,
+            },
+        );
     }
     result
 }
 
-pub fn convert_entity(entity_descriptor: Vec<EntityDescriptor>) -> Vec<EntityType> {
-    Vec::new()
+pub fn convert_entity(entity_descriptor: Vec<EntityDescriptor>) -> HashMap<String, EntityType> {
+    HashMap::new()
 }

@@ -118,8 +118,8 @@ pub fn setup_resources(
 
 #[derive(Resource, Default)]
 pub struct LoadableTypes {
-    pub entities: Vec<EntityType>,
-    pub blocks: Vec<BlockType>,
+    pub entities: HashMap<String, EntityType>,
+    pub blocks: HashMap<String, BlockType>,
 }
 
 #[derive(Resource, Default)]
@@ -139,7 +139,8 @@ pub fn load_blocks(
 ) {
     if *has_ran != true {
         if loadable_types.is_changed() {
-            for block in &loadable_types.blocks {
+            for block_pair in &loadable_types.blocks {
+                let block = block_pair.1;
                 for texture_path_and_type in block.textures.iter() {
                     let mut path = "blocks/".to_string();
                     path.push_str(block.block_name.as_str());
