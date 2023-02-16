@@ -8,3 +8,7 @@ the world blocks and doing simple things relating to entities such as health. I 
 as of now. Most base content I add will be either done in rust for things I consider critical to base game.
 And most blocks and entities only need some ron files to describe them with stuff such as ai mostly handled in
 rust.
+
+// Handling Chunks
+Chunks will be put into a queue and spread across frames with bevys asynccomputetaskpool. This goes for both
+meshes on the client and the actual chunk data on the server.
