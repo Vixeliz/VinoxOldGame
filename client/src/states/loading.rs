@@ -34,6 +34,8 @@ use bevy_renet::{
 use iyes_loopless::prelude::*;
 extern crate common;
 
+//TODO: Right now we are building the client only as a multiplayer client. This is fine but eventually we need to have singleplayer.
+// To achieve this we will just have the client start up a server. But for now I am just going to use a dedicated one for testing
 pub fn new_client(mut commands: Commands, ip_res: Res<NetworkIP>) {
     let port: String = ":25565".to_owned();
     let server_addr = format!("{}{}", ip_res.0, port).parse().unwrap();

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct BlockDescriptor {
@@ -14,5 +14,6 @@ pub struct BlockDescriptor {
     pub break_tool: String,
     pub walk_sound: Option<String>,
     pub break_sound: Option<String>,
-    pub block_script: Option<String>
+    pub block_script: Option<String>,
+    pub opaque: bool,
 }

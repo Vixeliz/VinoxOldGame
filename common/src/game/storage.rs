@@ -39,6 +39,7 @@ pub struct BlockType {
     pub walk_sound: Option<String>,
     pub break_sound: Option<String>,
     pub block_script: Option<String>,
+    pub opaque: bool,
 }
 
 #[derive(Debug)]
@@ -81,6 +82,7 @@ pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, 
                 walk_sound: raw_block.walk_sound,
                 break_sound: raw_block.break_sound,
                 block_script: raw_block.block_script,
+                opaque: raw_block.opaque,
             },
         );
     }
