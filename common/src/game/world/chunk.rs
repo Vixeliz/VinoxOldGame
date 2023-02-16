@@ -54,7 +54,7 @@ impl MeshableVoxel for Voxel {
                 if self.0 .1 {
                     block_mesh::VoxelVisibility::Opaque
                 } else {
-                    block_mesh::VoxelVisibility::Empty
+                    block_mesh::VoxelVisibility::Translucent
                 }
             }
         }

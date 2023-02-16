@@ -7,7 +7,8 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy_renet::renet::{
-    ChannelConfig, ReliableChannelConfig, RenetConnectionConfig, UnreliableChannelConfig,
+    ChannelConfig, ChunkChannelConfig, ReliableChannelConfig, RenetConnectionConfig,
+    UnreliableChannelConfig,
 };
 use serde::{Deserialize, Serialize};
 
@@ -25,7 +26,7 @@ pub struct Player {
 pub struct PlayerPos {
     pub translation: [f32; 3],
     pub yaw: f32,
-    pub pitch: f32
+    pub pitch: f32,
 }
 
 // Networking related
@@ -50,15 +51,12 @@ pub enum ClientChannel {
 pub enum ServerChannel {
     ServerMessages,
     NetworkedEntities,
+    LevelData,
 }
-
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum Commands {
-    Interact {
-        entity: Entity,
-        attack: bool
-    },
+    Interact { entity: Entity, attack: bool },
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -118,6 +116,11 @@ impl ServerChannel {
                 ..Default::default()
             }
             .into(),
+            ChunkChannelConfig {
+                channel_id: Self::LevelData.into(),
+                resend_time: Duration::from_millis(100),
+                ..Default::default()
+            },
         ]
     }
 }
@@ -127,6 +130,7 @@ impl From<ServerChannel> for u8 {
         match channel_id {
             ServerChannel::NetworkedEntities => 0,
             ServerChannel::ServerMessages => 1,
+            ServerChannel::LevelData => 2,
         }
     }
 }

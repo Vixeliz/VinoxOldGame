@@ -79,11 +79,121 @@ pub fn visible_block_faces_with_voxel_view<'a, T, V, S>(
                 VoxelVisibility::Opaque => false,
             };
 
+            let [x, y, z] = voxels_shape.delinearize(p_index.wrapping_add(face_stride));
+
+            let neighbours: [V; 8];
+            if face_index == 0 || face_index == 3 {
+                // left or right
+                neighbours = [
+                    V::from(&voxels[voxels_shape.linearize([x, y, z + 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y - 1, z + 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y - 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y - 1, z - 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y, z - 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y + 1, z - 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y + 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y + 1, z + 1]) as usize]),
+                ];
+            } else if face_index == 1 || face_index == 4 {
+                // bottom or top
+                neighbours = [
+                    V::from(&voxels[voxels_shape.linearize([x, y, z + 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x - 1, y, z + 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x - 1, y, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x - 1, y, z - 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y, z - 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x + 1, y, z - 1]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x + 1, y, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x + 1, y, z + 1]) as usize]),
+                ];
+            } else {
+                // back or front
+                neighbours = [
+                    V::from(&voxels[voxels_shape.linearize([x + 1, y, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x + 1, y - 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y - 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x - 1, y - 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x - 1, y, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x - 1, y + 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x, y + 1, z]) as usize]),
+                    V::from(&voxels[voxels_shape.linearize([x + 1, y + 1, z]) as usize]),
+                ];
+            }
+
+            let mut ao = [0; 4];
+            if neighbours[0].get_visibility() == VoxelVisibility::Opaque
+                && neighbours[2].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[1] = 0;
+            } else if neighbours[1].get_visibility() == VoxelVisibility::Opaque
+                && (neighbours[0].get_visibility() == VoxelVisibility::Opaque
+                    || neighbours[2].get_visibility() == VoxelVisibility::Opaque)
+            {
+                ao[1] = 1;
+            } else if neighbours[0].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[1].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[2].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[1] = 2;
+            } else {
+                ao[1] = 3;
+            }
+            if neighbours[2].get_visibility() == VoxelVisibility::Opaque
+                && neighbours[4].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[0] = 0;
+            } else if neighbours[3].get_visibility() == VoxelVisibility::Opaque
+                && (neighbours[2].get_visibility() == VoxelVisibility::Opaque
+                    || neighbours[4].get_visibility() == VoxelVisibility::Opaque)
+            {
+                ao[0] = 1;
+            } else if neighbours[2].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[3].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[4].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[0] = 2;
+            } else {
+                ao[0] = 3;
+            }
+            if neighbours[4].get_visibility() == VoxelVisibility::Opaque
+                && neighbours[6].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[2] = 0;
+            } else if neighbours[5].get_visibility() == VoxelVisibility::Opaque
+                && (neighbours[4].get_visibility() == VoxelVisibility::Opaque
+                    || neighbours[6].get_visibility() == VoxelVisibility::Opaque)
+            {
+                ao[2] = 1;
+            } else if neighbours[4].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[5].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[6].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[2] = 2;
+            } else {
+                ao[2] = 3;
+            }
+            if neighbours[6].get_visibility() == VoxelVisibility::Opaque
+                && neighbours[0].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[3] = 0;
+            } else if neighbours[7].get_visibility() == VoxelVisibility::Opaque
+                && (neighbours[6].get_visibility() == VoxelVisibility::Opaque
+                    || neighbours[0].get_visibility() == VoxelVisibility::Opaque)
+            {
+                ao[3] = 1;
+            } else if neighbours[6].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[7].get_visibility() == VoxelVisibility::Opaque
+                || neighbours[0].get_visibility() == VoxelVisibility::Opaque
+            {
+                ao[3] = 2;
+            } else {
+                ao[3] = 3;
+            }
+
             if face_needs_mesh {
-                // maybe i broke a test ? probably
                 output.groups[face_index].push(UnorientedUnitQuad {
                     minimum: p_array,
-                    ao: [0; 4],
+                    ao,
                 });
             }
         }
