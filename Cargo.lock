@@ -1368,6 +1368,7 @@ dependencies = [
  "block-mesh",
  "component",
  "directories",
+ "indexmap",
  "mlua",
  "ron",
  "serde",

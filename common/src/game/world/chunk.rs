@@ -4,7 +4,7 @@ use block_mesh::{
     greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer,
     Voxel as MeshableVoxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG,
 };
-use std::collections::HashMap;
+use indexmap::IndexMap;
 
 pub const CHUNK_SIZE: u8 = 32;
 pub const TOTAL_CHUNK_SIZE: u16 =
@@ -68,8 +68,49 @@ pub type ChunkShape = ConstShape3u32<
 >;
 
 pub struct RawChunk {
-    pub palette: HashMap<String, u16>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
+    pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
     pub voxels: [Voxel; TOTAL_CHUNK_SIZE as usize],
+}
+
+impl RawChunk {
+    pub fn new() -> Option<RawChunk> {
+        Some(RawChunk {
+            palette: Vec::new(),
+            voxels: [Voxel((0, false)); TOTAL_CHUNK_SIZE as usize],
+        })
+    }
+
+    pub fn get_index_for_state(&self, block_data: &String) -> Option<usize> {
+        if let Some(index) = self.palette.iter().position(|i| i.eq(block_data)) {
+            Some(index)
+        } else {
+            None
+        }
+    }
+
+    pub fn get_state_for_index(&self, index: usize) -> Option<String> {
+        if let Some(state) = self.palette.get(index) {
+            Some(state.to_owned())
+        } else {
+            None
+        }
+    }
+
+    pub fn add_block_state(&mut self, block_data: &String) {
+        if let Some(id) = self.get_index_for_state(block_data) {
+            warn!("Block data: {}, already exist!", block_data);
+        } else {
+            self.palette.push(block_data.to_owned());
+        }
+    }
+    pub fn remove_block_state(&mut self, block_data: &String) {
+        if let Some(id) = self.get_index_for_state(block_data) {
+            self.palette.remove(id);
+        } else {
+            warn!("Block data: {}, doesn't exist!", block_data);
+        }
+    }
+    pub fn set_voxel(&mut self, index: usize, block_data: String) {}
 }
 
 #[cfg(test)]
@@ -88,9 +129,17 @@ mod tests {
                 }
             }
         }
-        let raw_chunk = RawChunk {
-            palette: HashMap::new(),
+        let mut raw_chunk = RawChunk {
+            palette: Vec::new(),
             voxels,
         };
+        raw_chunk.add_block_state(&"test".to_string());
+        raw_chunk.add_block_state(&"test1".to_string());
+        raw_chunk.remove_block_state(&"test".to_string());
+        println!(
+            "{:?}\n",
+            raw_chunk.get_index_for_state(&"test1".to_string())
+        );
+        println!("{:?}\n", raw_chunk.get_state_for_index(0));
     }
 }

@@ -120,7 +120,8 @@ impl ServerChannel {
                 channel_id: Self::LevelData.into(),
                 resend_time: Duration::from_millis(100),
                 ..Default::default()
-            },
+            }
+            .into(),
         ]
     }
 }
