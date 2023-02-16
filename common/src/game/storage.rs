@@ -1,43 +1,89 @@
+use crate::game::scripting::block::block_descriptor::BlockDescriptor;
+use crate::game::scripting::entity::entity_descriptor::EntityDescriptor;
 use std::collections::HashMap;
+use std::str::FromStr;
+use strum_macros::EnumString;
 
-use serde::{Serialize, Deserialize};
-
+#[derive(Debug, PartialEq, EnumString, Default)]
 pub enum AiType {
-    walk,
-    fly,
-    swim
+    #[strum(ascii_case_insensitive)]
+    #[default]
+    Walk,
+    #[strum(ascii_case_insensitive)]
+    Fly,
+    #[strum(ascii_case_insensitive)]
+    Swim,
 }
 
+#[derive(Debug, PartialEq, EnumString, Default)]
 pub enum BreakTool {
-    shovel,
-    pickaxe,
-    axe
+    #[strum(ascii_case_insensitive)]
+    Shovel,
+    #[strum(ascii_case_insensitive)]
+    #[default]
+    Pickaxe,
+    #[strum(ascii_case_insensitive)]
+    Axe,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct BlockType {
-    namespace: String,
-    block_name: String,
-    textures: HashMap<String, String>,
-    model: Option<String>, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
-    interactable: bool,
-    friction: f32,
-    break_time: f32,
-    break_tool: BreakTool,
-    walk_sound: Option<String>,
-    break_sound: Option<String>,
-    block_script: Option<String>
+    pub namespace: String,
+    pub block_name: String,
+    pub textures: HashMap<String, String>,
+    pub model: Option<String>, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
+    pub interactable: bool,
+    pub friction: f32,
+    pub break_time: f32,
+    pub break_tool: BreakTool,
+    pub walk_sound: Option<String>,
+    pub break_sound: Option<String>,
+    pub block_script: Option<String>,
 }
 
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Debug)]
 pub struct EntityType {
-    namespace: String,
-    entity_name: String,
-    model: String, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
-    friction: f32,
-    attack: u32,
-    entity_script: Option<String>,
-    interactable: bool,
-    ai_type: AiType
+    pub namespace: String,
+    pub entity_name: String,
+    pub model: String, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
+    pub friction: f32,
+    pub attack: u32,
+    pub entity_script: Option<String>,
+    pub interactable: bool,
+    pub ai_type: AiType,
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::game::scripting::block::{block_descriptor::*, load::*};
+    use crate::game::scripting::entity::{entity_descriptor::*, load::*};
+    use crate::game::storage::convert_block;
+    #[test]
+    fn converted_block() {
+        println!("{:?}", convert_block(load_all_blocks()));
+    }
+}
+
+pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> Vec<BlockType> {
+    let mut result: Vec<BlockType> = Vec::new();
+    for raw_block in block_descriptor {
+        result.push(BlockType {
+            namespace: raw_block.namespace,
+            block_name: raw_block.block_name,
+            textures: raw_block.textures,
+            model: raw_block.model,
+            interactable: raw_block.interactable,
+            friction: raw_block.friction,
+            break_time: raw_block.break_time,
+            break_tool: BreakTool::from_str(raw_block.break_tool.as_str()).unwrap_or_default(),
+            walk_sound: raw_block.walk_sound,
+            break_sound: raw_block.break_sound,
+            block_script: raw_block.block_script,
+        })
+    }
+    result
+}
+
+pub fn convert_entity(entity_descriptor: Vec<EntityDescriptor>) -> Vec<EntityType> {
+    Vec::new()
 }

@@ -15,3 +15,4 @@ iyes_loopless = "0.9.1"
 bevy_rapier3d = {workspace=true}
 mlua = {workspace=true}
 ron = {workspace=true}
+directories = {workspace=true}

@@ -23,3 +23,5 @@ ron = {workspace=true}
 bevy_easings = "0.9.1"
 bevy_rapier3d = {workspace = true}
 bevy-inspector-egui = "0.17.0"
+directories = {workspace=true}
+walkdir = "2.3.2"

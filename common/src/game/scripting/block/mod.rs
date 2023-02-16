@@ -1,2 +1,2 @@
-mod load;
-mod block_descriptor;
+pub mod load;
+pub mod block_descriptor;
