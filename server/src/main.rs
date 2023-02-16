@@ -6,6 +6,8 @@ use iyes_loopless::prelude::*;
 use std::{env, time::Duration};
 mod game;
 mod networking;
+
+// Server should always keep spawn chunks loaded and any chunks near players
 fn main() {
     let args: Vec<String> = env::args().collect();
 
