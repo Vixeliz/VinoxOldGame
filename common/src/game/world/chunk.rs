@@ -134,17 +134,41 @@ impl RawChunk {
             warn!("Block data: {}, doesn't exist!", block_data);
         }
     }
-    pub fn set_block(&mut self, index: usize, block_data: String) {
-        if let Some(block_type) = self.get_index_for_state(&block_data) {
-            self.voxels[index] = Voxel((block_type as u16, true)); // TODO: Set translucent based off of block
+    // This actual chunks data starts at 1,1,1 and ends at chunk_size - 1
+    pub fn set_block(&mut self, pos: UVec3, block_data: String) {
+        if pos.x > 0
+            && pos.x < (CHUNK_SIZE + 1) as u32
+            && pos.y > 0
+            && pos.y < (CHUNK_SIZE + 1) as u32
+            && pos.z > 0
+            && pos.z < (CHUNK_SIZE + 1) as u32
+        {
+            let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
+            if let Some(block_type) = self.get_index_for_state(&block_data) {
+                self.voxels[index] = Voxel((block_type as u16, true)); // TODO: Set translucent based off of block
+            } else {
+                warn!("Voxel doesn't exist");
+            }
         } else {
-            warn!("Voxel doesn't exist");
+            warn!("Voxel position outside of this chunks bounds");
         }
     }
-    pub fn get_block(&mut self, index: usize) -> Option<String> {
-        if let Some(block_state) = self.get_state_for_index(self.voxels[index].0 .0 as usize) {
-            Some(block_state)
+    pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
+        if pos.x > 0
+            && pos.x < (CHUNK_SIZE + 1) as u32
+            && pos.y > 0
+            && pos.y < (CHUNK_SIZE + 1) as u32
+            && pos.z > 0
+            && pos.z < (CHUNK_SIZE + 1) as u32
+        {
+            let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
+            if let Some(block_state) = self.get_state_for_index(self.voxels[index].0 .0 as usize) {
+                Some(block_state)
+            } else {
+                None
+            }
         } else {
+            warn!("Voxel position outside of this chunks bounds");
             None
         }
     }
@@ -167,13 +191,19 @@ mod tests {
             }
         }
         let mut raw_chunk = RawChunk::new();
-        let i = ChunkShape::linearize([1, 1, 1]);
         raw_chunk.add_block_state(&"test".to_string());
-        raw_chunk.set_block(i as usize, "test".to_string());
+        raw_chunk.set_block(UVec3::new(1, 1, 1), "test".to_string());
+        assert_eq!(
+            raw_chunk.get_block(UVec3::new(1, 1, 1)),
+            Some("test".to_string())
+        );
         raw_chunk.add_block_state(&"test1".to_string());
         raw_chunk.remove_block_state(&"test".to_string());
-        println!("{:?}\n", raw_chunk.get_block(i as usize));
-        assert_eq!(raw_chunk.get_block(i as usize), Some("air".to_string()));
+        println!("{:?}\n", raw_chunk.get_block(UVec3::new(1, 1, 1)));
+        assert_eq!(
+            raw_chunk.get_block(UVec3::new(1, 1, 1)),
+            Some("air".to_string())
+        );
         assert_eq!(raw_chunk.get_index_for_state(&"test1".to_string()), Some(1));
         assert_eq!(raw_chunk.get_state_for_index(1), Some("test1".to_string()));
         println!("{:?}\n", raw_chunk.get_state_for_index(0));

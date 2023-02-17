@@ -25,6 +25,11 @@ pub struct CurrentLoadPoints {
     pub points: Vec<IVec3>,
 }
 
+#[derive(Resource)]
+pub struct DirtyChunks {
+    pub chunks: Vec<Entity>,
+}
+
 #[derive(Default, Resource)]
 pub struct ViewDistance {
     pub width: i32,
@@ -32,9 +37,16 @@ pub struct ViewDistance {
     pub height: i32,
 }
 
+#[derive(Default, Resource)]
+pub struct ChunkQueue {
+    pub create: Vec<IVec3>,
+    pub remove: Vec<IVec3>,
+}
+
 #[derive(SystemParam)]
 pub struct ChunkManager<'w, 's> {
     commands: Commands<'w, 's>,
+    current_chunks: ResMut<'w, CurrentChunks>,
 }
 
 impl<'w, 's> ChunkManager<'w, 's> {}
