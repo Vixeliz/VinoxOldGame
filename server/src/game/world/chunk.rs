@@ -27,7 +27,22 @@ pub struct CurrentLoadPoints {
 
 #[derive(Resource)]
 pub struct DirtyChunks {
-    pub chunks: Vec<Entity>,
+    pub chunks: HashSet<IVec3>,
+}
+
+#[allow(dead_code)]
+impl DirtyChunks {
+    pub fn mark_dirty(&mut self, pos: IVec3) {
+        self.0.insert(pos);
+    }
+
+    pub fn iter_dirty(&self) -> impl Iterator<Item = &IVec3> {
+        self.0.iter()
+    }
+
+    pub fn num_dirty(&self) -> usize {
+        self.0.len()
+    }
 }
 
 #[derive(Default, Resource)]
