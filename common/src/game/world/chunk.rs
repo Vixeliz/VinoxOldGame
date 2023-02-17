@@ -173,6 +173,7 @@ mod tests {
         raw_chunk.add_block_state(&"test1".to_string());
         raw_chunk.remove_block_state(&"test".to_string());
         println!("{:?}\n", raw_chunk.get_block(i as usize));
+        assert_eq!(raw_chunk.get_block(i as usize), Some("air".to_string()));
         assert_eq!(raw_chunk.get_index_for_state(&"test1".to_string()), Some(1));
         assert_eq!(raw_chunk.get_state_for_index(1), Some("test1".to_string()));
         println!("{:?}\n", raw_chunk.get_state_for_index(0));
