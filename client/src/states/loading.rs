@@ -110,7 +110,7 @@ pub fn setup_resources(
     commands.insert_resource(PlayerBundleBuilder {
         default_model: player_handle,
         model_aabb: Aabb {
-            half_extents: Vec3A::new(1.0, 2.0, 0.5),
+            half_extents: Vec3A::new(0.25, 1.0, 0.2),
             ..default()
         },
     });
