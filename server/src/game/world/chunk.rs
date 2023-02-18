@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{ecs::system::SystemParam, prelude::*};
 use std::collections::*;
 
 #[derive(Resource)]
@@ -8,15 +8,15 @@ pub struct CurrentChunks {
 
 impl CurrentChunks {
     pub fn insert_entity(&mut self, pos: IVec3, entity: Entity) {
-        self.0.insert(pos, entity);
+        self.chunks.insert(pos, entity);
     }
 
     pub fn remove_entity(&mut self, pos: IVec3) -> Option<Entity> {
-        self.0.remove(&pos)
+        self.chunks.remove(&pos)
     }
 
     pub fn get_entity(&self, pos: IVec3) -> Option<Entity> {
-        self.0.get(&pos).map(|x| x.clone())
+        self.chunks.get(&pos).map(|x| x.clone())
     }
 }
 
@@ -33,15 +33,15 @@ pub struct DirtyChunks {
 #[allow(dead_code)]
 impl DirtyChunks {
     pub fn mark_dirty(&mut self, pos: IVec3) {
-        self.0.insert(pos);
+        self.chunks.insert(pos);
     }
 
     pub fn iter_dirty(&self) -> impl Iterator<Item = &IVec3> {
-        self.0.iter()
+        self.chunks.iter()
     }
 
     pub fn num_dirty(&self) -> usize {
-        self.0.len()
+        self.chunks.len()
     }
 }
 

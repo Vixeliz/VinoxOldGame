@@ -67,6 +67,7 @@ pub type ChunkShape = ConstShape3u32<
     { (CHUNK_SIZE + 1) as u32 },
 >;
 
+#[derive(Debug)]
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
     pub voxels: [Voxel; TOTAL_CHUNK_SIZE as usize],
@@ -105,7 +106,11 @@ impl RawChunk {
         for i in 0..self.voxels.len() {
             if let Some(block_data) = old_vec.get(self.voxels[i].0 .0 as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
-                    self.voxels[i] = Voxel((new_index as u16, true)); // TODO: Transluency
+                    if block_data.eq("air") {
+                        self.voxels[i] = Voxel((new_index as u16, false)); // TODO: Transluency
+                    } else {
+                        self.voxels[i] = Voxel((new_index as u16, true)); // TODO: Transluency
+                    }
                 } else {
                     self.voxels[i] = Voxel((0, false));
                 }
@@ -145,7 +150,11 @@ impl RawChunk {
         {
             let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
             if let Some(block_type) = self.get_index_for_state(&block_data) {
-                self.voxels[index] = Voxel((block_type as u16, true)); // TODO: Set translucent based off of block
+                if block_data.eq("air") {
+                    self.voxels[index] = Voxel((block_type as u16, false)); // TODO: Set translucent based off of block
+                } else {
+                    self.voxels[index] = Voxel((block_type as u16, true)); // TODO: Set translucent based off of block
+                }
             } else {
                 warn!("Voxel doesn't exist");
             }
@@ -193,6 +202,7 @@ mod tests {
         let mut raw_chunk = RawChunk::new();
         raw_chunk.add_block_state(&"test".to_string());
         raw_chunk.set_block(UVec3::new(1, 1, 1), "test".to_string());
+        raw_chunk.set_block(UVec3::new(1, 1, 2), "air".to_string());
         assert_eq!(
             raw_chunk.get_block(UVec3::new(1, 1, 1)),
             Some("test".to_string())
