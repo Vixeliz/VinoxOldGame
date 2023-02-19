@@ -17,4 +17,5 @@ mlua = {workspace=true}
 ron = {workspace=true}
 directories = {workspace=true}
 noise = "0.8.2"
+futures-lite = "1.12.0"
 

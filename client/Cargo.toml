@@ -11,6 +11,7 @@ opt-level = 1
 opt-level = 3
 
 [dependencies]
+block-mesh = {path = "../block-mesh-rs"}
 common = { path = "../common"}
 bevy = {workspace = true}
 bevy_renet = {workspace = true}

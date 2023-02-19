@@ -6,7 +6,9 @@ use common::{
 };
 use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
 
-pub fn setup(mut commands: Commands) {}
+pub fn setup(mut commands: Commands, mut chunk_manager: ChunkManager) {
+    chunk_manager.add_chunk_to_queue(IVec3 { x: 0, y: 0, z: 0 });
+}
 
 use std::{
     collections::HashMap,
@@ -19,6 +21,8 @@ use bevy_renet::{
     renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig, ServerEvent},
     RenetServerPlugin,
 };
+
+use super::world::chunk::{process_queue, ChunkGenerationPlugin, ChunkManager};
 
 extern crate common;
 
@@ -60,12 +64,13 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_startup_system(setup)
+        app.add_plugin(ChunkGenerationPlugin)
             .add_startup_system(new_renet_server)
             .add_startup_system(setup_builders)
             .add_system(panic_on_error_system)
             .add_system(syncing::server_update_system)
             .add_fixed_timestep_system("network_update", 0, syncing::server_network_sync)
+            .add_startup_system(setup)
             .insert_resource(ServerLobby::default());
     }
 }

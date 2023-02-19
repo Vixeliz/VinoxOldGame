@@ -12,6 +12,8 @@ use bevy_renet::renet::{
 };
 use serde::{Deserialize, Serialize};
 
+use crate::game::world::chunk::RawChunk;
+
 pub const PROTOCOL_ID: u64 = 7;
 
 #[derive(Component)]
@@ -52,6 +54,11 @@ pub enum ServerChannel {
     ServerMessages,
     NetworkedEntities,
     LevelData,
+}
+
+#[derive(Debug, Serialize, Deserialize, Component)]
+pub enum LevelData {
+    ChunkCreate { chunk_data: RawChunk, pos: [i32; 3] },
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]

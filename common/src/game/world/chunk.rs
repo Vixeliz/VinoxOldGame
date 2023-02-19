@@ -5,6 +5,9 @@ use block_mesh::{
     Voxel as MeshableVoxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG,
 };
 use indexmap::IndexMap;
+use serde::{Deserialize, Serialize};
+
+use serde_big_array::BigArray;
 
 pub const CHUNK_SIZE: u8 = 32;
 pub const TOTAL_CHUNK_SIZE: u16 =
@@ -18,8 +21,8 @@ pub struct Chunk {
     pub dirty: bool,
 }
 
-#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq)]
-pub struct Voxel((u16, bool)); // Having this bool is mildly annoying but i'm not sure of a better way to do this
+#[derive(Copy, Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Voxel(pub (u16, bool)); // Having this bool is mildly annoying but i'm not sure of a better way to do this
 
 impl Voxel {
     pub const EMPTY_VOXEL: Voxel = Voxel((0, false));
@@ -67,9 +70,10 @@ pub type ChunkShape = ConstShape3u32<
     { (CHUNK_SIZE + 1) as u32 },
 >;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
+    #[serde(with = "BigArray")]
     pub voxels: [Voxel; TOTAL_CHUNK_SIZE as usize],
 }
 

@@ -1,11 +1,14 @@
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::bundles::PlayerBundleBuilder,
+    game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
     networking::components::{
-        ClientChannel, NetworkedEntities, Player, PlayerPos, ServerChannel, ServerMessages,
+        ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
+        ServerMessages,
     },
 };
+
+use crate::game::world::{chunk::CurrentChunks, generation::generate_chunk};
 
 use super::components::ServerLobby;
 
@@ -17,6 +20,8 @@ pub fn server_update_system(
     mut lobby: ResMut<ServerLobby>,
     mut server: ResMut<RenetServer>,
     players: Query<(Entity, &Player, &Transform)>,
+    chunks: Query<&Chunk>,
+    current_chunks: Res<CurrentChunks>,
     player_builder: Res<PlayerBundleBuilder>,
 ) {
     for event in server_events.iter() {
@@ -32,7 +37,7 @@ pub fn server_update_system(
                         entity,
                         translation,
                         yaw: 0.0,
-                        pitch: 0.0, 
+                        pitch: 0.0,
                     })
                     .unwrap();
                     server.send_message(*id, ServerChannel::ServerMessages, message);
@@ -52,10 +57,21 @@ pub fn server_update_system(
                     entity: player_entity,
                     translation,
                     yaw: 0.0,
-                    pitch: 0.0
+                    pitch: 0.0,
                 })
                 .unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
+                if let Some(chunk_entity) = current_chunks.get_entity(IVec3 { x: 0, y: 0, z: 0 }) {
+                    if let Ok(chunk) = chunks.get(chunk_entity) {
+                        let raw_chunk = chunk.chunk_data.clone();
+                        let chunk_message = bincode::serialize(&LevelData::ChunkCreate {
+                            chunk_data: raw_chunk,
+                            pos: IVec3::new(0, 0, 0).into(),
+                        })
+                        .unwrap();
+                        server.send_message(*id, ServerChannel::LevelData, chunk_message);
+                    }
+                }
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Player {} disconnected.", id);
@@ -75,8 +91,9 @@ pub fn server_update_system(
             let transform: PlayerPos = bincode::deserialize(&message).unwrap();
             if let Some(player_entity) = lobby.players.get(&client_id) {
                 commands.entity(*player_entity).insert(
-                    Transform::from_translation(transform.translation.into())
-                        .with_rotation(Quat::from_euler(EulerRot::ZYX, 0.0, transform.yaw, transform.pitch)),
+                    Transform::from_translation(transform.translation.into()).with_rotation(
+                        Quat::from_euler(EulerRot::ZYX, 0.0, transform.yaw, transform.pitch),
+                    ),
                 );
             }
         }

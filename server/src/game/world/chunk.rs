@@ -1,7 +1,15 @@
-use bevy::{ecs::system::SystemParam, prelude::*};
+use bevy::{
+    ecs::system::SystemParam,
+    prelude::*,
+    tasks::{AsyncComputeTaskPool, Task},
+};
+use common::game::world::chunk::Chunk;
 use std::collections::*;
 
-#[derive(Resource)]
+use super::generation::generate_chunk;
+use futures_lite::future;
+
+#[derive(Resource, Default)]
 pub struct CurrentChunks {
     pub chunks: HashMap<IVec3, Entity>,
 }
@@ -62,6 +70,65 @@ pub struct ChunkQueue {
 pub struct ChunkManager<'w, 's> {
     commands: Commands<'w, 's>,
     current_chunks: ResMut<'w, CurrentChunks>,
+    chunk_queue: ResMut<'w, ChunkQueue>,
 }
 
-impl<'w, 's> ChunkManager<'w, 's> {}
+impl<'w, 's> ChunkManager<'w, 's> {
+    pub fn add_chunk_to_queue(&mut self, pos: IVec3) {
+        self.chunk_queue.create.push(pos);
+    }
+}
+
+#[derive(Component)]
+pub struct ChunkGenTask(Task<Chunk>);
+
+pub fn process_task(mut commands: Commands, mut chunk_query: Query<(Entity, &mut ChunkGenTask)>) {
+    for (entity, mut chunk_task) in &mut chunk_query {
+        if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
+            commands.entity(entity).insert(chunk);
+            commands.entity(entity).remove::<ChunkGenTask>();
+        }
+    }
+}
+
+pub fn process_queue(
+    mut commands: Commands,
+    mut chunk_queue: ResMut<ChunkQueue>,
+    mut current_chunks: ResMut<CurrentChunks>,
+) {
+    let task_pool = AsyncComputeTaskPool::get();
+    chunk_queue
+        .create
+        .iter()
+        .cloned()
+        .map(|chunk_pos| {
+            (
+                chunk_pos,
+                ChunkGenTask(task_pool.spawn(async move {
+                    let chunk = Chunk {
+                        pos: chunk_pos,
+                        chunk_data: generate_chunk(chunk_pos, 0),
+                        dirty: false,
+                        entities: Vec::new(),
+                    };
+                    chunk
+                })),
+            )
+        })
+        .for_each(|(chunk_pos, chunk)| {
+            let chunk_id = commands.spawn(chunk).id();
+            current_chunks.insert_entity(chunk_pos, chunk_id);
+        });
+    chunk_queue.create.clear();
+}
+
+pub struct ChunkGenerationPlugin;
+
+impl Plugin for ChunkGenerationPlugin {
+    fn build(&self, app: &mut App) {
+        app.insert_resource(CurrentChunks::default())
+            .insert_resource(ChunkQueue::default())
+            .add_system(process_queue)
+            .add_system(process_task);
+    }
+}
