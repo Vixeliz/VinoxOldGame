@@ -54,17 +54,6 @@ pub struct EntityType {
     pub ai_type: AiType,
 }
 
-#[cfg(test)]
-mod tests {
-    use crate::game::scripting::block::{block_descriptor::*, load::*};
-    use crate::game::scripting::entity::{entity_descriptor::*, load::*};
-    use crate::game::storage::convert_block;
-    #[test]
-    fn converted_block() {
-        println!("{:?}", convert_block(load_all_blocks()));
-    }
-}
-
 pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, BlockType> {
     let mut result = HashMap::new();
     for raw_block in block_descriptor {

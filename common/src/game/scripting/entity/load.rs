@@ -5,15 +5,6 @@ use walkdir::WalkDir;
 
 use super::entity_descriptor::EntityDescriptor;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn show_entities() {
-        println!("{:?}", load_all_entities());
-    }
-}
-
 pub fn load_all_entities() -> Vec<EntityDescriptor> {
     let mut result = Vec::new();
     if let Some(proj_dirs) = ProjectDirs::from("com", "vinox", "vinox") {

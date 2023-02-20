@@ -31,13 +31,3 @@ pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
     }
     raw_chunk
 }
-
-#[cfg(test)]
-mod tests {
-    use crate::game::world::generation::*;
-    use bevy::prelude::*;
-    #[test]
-    fn chunk_type() {
-        // println!("{:?}", generate_chunk(IVec3::new(0, 0, 0), 0));
-    }
-}

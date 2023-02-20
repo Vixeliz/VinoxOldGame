@@ -13,10 +13,6 @@ use crate::{
 };
 
 pub fn setup(mut commands: Commands) {
-    commands.spawn((Game, Camera3dBundle {
-        transform: Transform::from_translation(Vec3::new(-1.0, 0.0, -1.0)),
-        ..default()
-    }));
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 3000.0,
@@ -31,7 +27,6 @@ pub fn setup(mut commands: Commands) {
         color: Color::WHITE,
         brightness: 0.5,
     });
-
 }
 
 pub struct GamePlugin;

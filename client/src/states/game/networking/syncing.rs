@@ -24,7 +24,7 @@ use common::{
     },
 };
 
-use crate::states::game::networking::components::ControlledPlayer;
+use crate::{components::Game, states::game::networking::components::ControlledPlayer};
 
 use super::components::{ClientLobby, NetworkMapping, PlayerInfo};
 
@@ -54,6 +54,16 @@ pub fn client_sync_players(
                 let mut client_entity = cmd1.spawn_empty();
                 if client_id == id {
                     println!("You connected.");
+                    let camera_id = cmd2
+                        .spawn((
+                            Game,
+                            Camera3dBundle {
+                                transform: Transform::from_translation(Vec3::new(-1.0, 0.0, -1.0)),
+                                ..default()
+                            },
+                        ))
+                        .id();
+                    client_entity.push_children(&[camera_id]);
                     client_entity
                         .insert(player_builder.build(translation.into(), id))
                         .insert(ControlledPlayer);
