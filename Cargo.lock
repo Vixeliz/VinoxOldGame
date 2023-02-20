@@ -1361,6 +1361,7 @@ dependencies = [
  "directories",
  "indexmap",
  "mlua",
+ "rand 0.8.5",
  "ron",
  "serde",
  "serde-big-array",
@@ -3888,6 +3889,7 @@ dependencies = [
  "iyes_loopless",
  "mlua",
  "noise",
+ "rand 0.8.5",
  "ron",
  "serde",
 ]

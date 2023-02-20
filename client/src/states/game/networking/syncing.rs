@@ -16,7 +16,7 @@ use block_mesh::{
 use common::{
     game::{
         bundles::{ColliderBundle, PlayerBundleBuilder},
-        world::chunk::{ChunkShape, Voxel},
+        world::chunk::{ChunkShape, Voxel, CHUNK_SIZE},
     },
     networking::components::{
         ClientChannel, EntityBuffer, LevelData, NetworkedEntities, Player, PlayerPos,
@@ -94,7 +94,7 @@ pub fn client_sync_players(
         let level_data: LevelData = bincode::deserialize(&message).unwrap();
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
-                println!("Recieved chunk");
+                println!("Recieved chunk {:?}", pos);
                 let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
                 // Simple meshing works on web and makes texture atlases easier. However I may look into greedy meshing in future
@@ -179,21 +179,30 @@ pub fn client_sync_players(
                         perceptual_roughness: 1.0,
                         ..default()
                     }),
-                    transform: Transform::from_translation(Vec3::splat(-10.0)),
+                    transform: Transform::from_translation(Vec3::new(
+                        (pos[0] * (CHUNK_SIZE) as i32) as f32,
+                        (pos[1] * (CHUNK_SIZE) as i32) as f32,
+                        (pos[2] * (CHUNK_SIZE) as i32) as f32,
+                    )),
                     ..Default::default()
                 });
-                cmd2.spawn(PbrBundle {
-                    mesh: meshes.add(render_mesh),
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::WHITE,
-                        // base_color_texture: Some(texture_handle.0.clone()),
-                        alpha_mode: AlphaMode::Blend,
-                        perceptual_roughness: 1.0,
-                        ..default()
-                    }),
-                    transform: Transform::from_translation(Vec3::splat(-10.0)),
-                    ..Default::default()
-                });
+                // This is stupid and awful so ill come back to semi transparent objects
+                // cmd2.spawn(PbrBundle {
+                //     mesh: meshes.add(render_mesh),
+                //     material: materials.add(StandardMaterial {
+                //         base_color: Color::WHITE,
+                //         // base_color_texture: Some(texture_handle.0.clone()),
+                //         alpha_mode: AlphaMode::Blend,
+                //         perceptual_roughness: 1.0,
+                //         ..default()
+                //     }),
+                //     transform: Transform::from_translation(Vec3::new(
+                //         (pos[0] * (CHUNK_SIZE / 2) as i32) as f32,
+                //         (pos[1] * (CHUNK_SIZE / 2) as i32) as f32,
+                //         (pos[2] * (CHUNK_SIZE / 2) as i32) as f32,
+                //     )),
+                //     ..Default::default()
+                // });
             }
         }
     }

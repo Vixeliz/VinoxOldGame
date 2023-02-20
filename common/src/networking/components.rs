@@ -125,7 +125,7 @@ impl ServerChannel {
             .into(),
             ChunkChannelConfig {
                 channel_id: Self::LevelData.into(),
-                resend_time: Duration::from_millis(100),
+                message_send_queue_size: 700,
                 ..Default::default()
             }
             .into(),

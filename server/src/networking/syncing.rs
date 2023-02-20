@@ -8,7 +8,10 @@ use common::{
     },
 };
 
-use crate::game::world::{chunk::CurrentChunks, generation::generate_chunk};
+use crate::game::world::{
+    chunk::{ChunkManager, CurrentChunks},
+    generation::generate_chunk,
+};
 
 use super::components::ServerLobby;
 
@@ -21,8 +24,8 @@ pub fn server_update_system(
     mut server: ResMut<RenetServer>,
     players: Query<(Entity, &Player, &Transform)>,
     chunks: Query<&Chunk>,
-    current_chunks: Res<CurrentChunks>,
     player_builder: Res<PlayerBundleBuilder>,
+    mut chunk_manager: ChunkManager,
 ) {
     for event in server_events.iter() {
         match event {
@@ -61,16 +64,16 @@ pub fn server_update_system(
                 })
                 .unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
-                if let Some(chunk_entity) = current_chunks.get_entity(IVec3 { x: 0, y: 0, z: 0 }) {
-                    if let Ok(chunk) = chunks.get(chunk_entity) {
-                        let raw_chunk = chunk.chunk_data.clone();
-                        let chunk_message = bincode::serialize(&LevelData::ChunkCreate {
-                            chunk_data: raw_chunk,
-                            pos: IVec3::new(0, 0, 0).into(),
-                        })
-                        .unwrap();
-                        server.send_message(*id, ServerChannel::LevelData, chunk_message);
-                    }
+                let chunk_pos = chunk_manager.world_to_chunk(transform.translation);
+                chunk_manager.add_point(chunk_pos);
+                for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
+                    let raw_chunk = chunk.chunk_data.clone();
+                    let chunk_message = bincode::serialize(&LevelData::ChunkCreate {
+                        chunk_data: raw_chunk,
+                        pos: chunk.pos.into(),
+                    })
+                    .unwrap();
+                    server.send_message(*id, ServerChannel::LevelData, chunk_message);
                 }
             }
             ServerEvent::ClientDisconnected(id) => {

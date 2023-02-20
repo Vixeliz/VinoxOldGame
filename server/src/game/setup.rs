@@ -7,7 +7,7 @@ use common::{
 use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
 
 pub fn setup(mut commands: Commands, mut chunk_manager: ChunkManager) {
-    chunk_manager.add_chunk_to_queue(IVec3 { x: 0, y: 0, z: 0 });
+    chunk_manager.add_point(IVec3 { x: 0, y: 0, z: 0 });
 }
 
 use std::{
