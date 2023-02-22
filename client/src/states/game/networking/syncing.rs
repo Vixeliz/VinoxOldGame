@@ -200,11 +200,10 @@ fn ao_convert(ao: Vec<u8>, num_vertices: usize) -> Vec<[f32; 4]> {
     let mut res = Vec::with_capacity(num_vertices);
     for value in ao {
         match value {
-            0 => res.extend_from_slice(&[[0.1, 0.1, 0.1, 1.0]]),
-            1 => res.extend_from_slice(&[[0.3, 0.3, 0.3, 1.0]]),
-            2 => res.extend_from_slice(&[[0.5, 0.5, 0.5, 1.0]]),
-            3 => res.extend_from_slice(&[[0.75, 0.75, 0.75, 1.0]]),
-            _ => res.extend_from_slice(&[[1., 1., 1., 1.0]]),
+            0 => res.extend_from_slice(&[[0.3, 0.3, 0.3, 1.0]]),
+            1 => res.extend_from_slice(&[[0.5, 0.5, 0.5, 1.0]]),
+            2 => res.extend_from_slice(&[[0.75, 0.75, 0.75, 1.0]]),
+            _ => res.extend_from_slice(&[[1.0, 1.0, 1.0, 1.0]]),
         }
     }
     res
