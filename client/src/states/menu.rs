@@ -6,13 +6,13 @@ use crate::systems::despawn_with;
 use belly::prelude::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use common::networking::components::{self, NetworkIP};
+use common::networking::components::{NetworkIP};
 use iyes_loopless::prelude::*;
 
 pub struct StartEvent;
 pub struct QuitEvent;
 
-pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+pub fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
     commands.spawn((Menu, Camera2dBundle::default()));
     commands.add(StyleSheet::parse(
         r#"
@@ -76,12 +76,12 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
 pub fn input(
     mut commands: Commands,
     keyboard_input: Res<Input<KeyCode>>,
-    mut text_query: Query<&mut Text>,
+    _text_query: Query<&mut Text>,
     label: Query<&Label>,
     mut ip_res: ResMut<NetworkIP>,
 ) {
     if let Ok(label_val) = label.get_single() {
-        if label_val.value != "" {
+        if !label_val.value.is_empty() {
             ip_res.0 = (*label_val.value).to_string();
         }
     }
@@ -91,13 +91,13 @@ pub fn input(
 }
 
 pub fn start_event(mut commands: Commands, mut events: EventReader<StartEvent>) {
-    for event in events.iter() {
+    for _event in events.iter() {
         commands.insert_resource(NextState(GameState::Loading));
     }
 }
 
 pub fn quit_event(mut events: EventReader<QuitEvent>, mut exit: EventWriter<AppExit>) {
-    for event in events.iter() {
+    for _event in events.iter() {
         exit.send(AppExit);
     }
 }

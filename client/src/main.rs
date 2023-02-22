@@ -18,7 +18,7 @@ use states::menu::MenuPlugin;
 use states::splashscreen::SplashscreenPlugin;
 
 fn main() {
-    let mut asset_path = if let Some(proj_dirs) = ProjectDirs::from("com", "vinox", "vinox") {
+    let asset_path = if let Some(proj_dirs) = ProjectDirs::from("com", "vinox", "vinox") {
         proj_dirs.data_dir().join("assets")
     } else {
         let mut path = PathBuf::new();

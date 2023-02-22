@@ -18,18 +18,14 @@ use crate::{
 use std::{
     collections::HashMap,
     net::UdpSocket,
-    time::{Duration, SystemTime},
+    time::{SystemTime},
 };
 
 use bevy::{
     app::AppExit,
-    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    prelude::*,
-    window::exit_on_all_closed,
 };
 use bevy_renet::{
     renet::{ClientAuthentication, RenetClient, RenetError},
-    RenetClientPlugin,
 };
 use iyes_loopless::prelude::*;
 extern crate common;
@@ -47,8 +43,8 @@ pub fn new_client(mut commands: Commands, ip_res: Res<NetworkIP>) {
     let client_id = current_time.as_millis() as u64;
     let authentication = ClientAuthentication::Unsecure {
         protocol_id: PROTOCOL_ID,
-        client_id: client_id,
-        server_addr: server_addr,
+        client_id,
+        server_addr,
         user_data: None,
     };
     commands.insert_resource(
@@ -84,9 +80,9 @@ pub fn switch(
 fn panic_on_error_system(
     mut renet_error: EventReader<RenetError>,
     mut commands: Commands,
-    mut client: ResMut<RenetClient>,
+    _client: ResMut<RenetClient>,
 ) {
-    for e in renet_error.iter() {
+    for _e in renet_error.iter() {
         commands.remove_resource::<RenetClient>();
         commands.insert_resource(NextState(GameState::Menu));
     }
@@ -135,57 +131,55 @@ pub struct LoadableAssets {
 }
 
 pub fn load_blocks(
-    mut commands: Commands,
+    _commands: Commands,
     asset_server: Res<AssetServer>,
     mut loading: ResMut<AssetsLoading>,
     loadable_types: Res<LoadableTypes>,
     mut loadable_assets: ResMut<LoadableAssets>,
     mut has_ran: Local<bool>,
 ) {
-    if *has_ran != true {
-        if loadable_types.is_changed() {
-            for block_pair in &loadable_types.blocks {
-                let block = block_pair.1;
-                for texture_path_and_type in block.textures.iter() {
-                    let mut path = "blocks/".to_string();
-                    path.push_str(block.block_name.as_str());
-                    path.push_str("/");
-                    path.push_str(texture_path_and_type.1);
-                    let texture_handle: Handle<Image> = asset_server.load(path.as_str());
-                    loading.0.push(texture_handle.clone_untyped());
-                    let mut block_identifier = block.namespace.to_owned();
-                    block_identifier.push_str(&block.block_name.to_owned());
-                    loadable_assets
-                        .block_textures
-                        .insert(block_identifier, texture_handle);
-                }
-                if let Some(mut model_path) = block.model.clone() {
-                    let mut path = "blocks/".to_string();
-                    path.push_str(block.block_name.as_str());
-                    path.push_str("/");
-                    path.push_str(model_path.as_str());
-                    path.push_str("#Scene0");
-                    let model_handle: Handle<Scene> = asset_server.load(model_path);
-                    loading.0.push(model_handle.clone_untyped());
-                    let mut block_identifier = block.namespace.to_owned();
-                    block_identifier.push_str(&block.block_name.to_owned());
-                    loadable_assets
-                        .block_models
-                        .insert(block_identifier, model_handle);
-                }
+    if !(*has_ran) && loadable_types.is_changed() {
+        for block_pair in &loadable_types.blocks {
+            let block = block_pair.1;
+            for texture_path_and_type in block.textures.iter() {
+                let mut path = "blocks/".to_string();
+                path.push_str(block.block_name.as_str());
+                path.push('/');
+                path.push_str(texture_path_and_type.1);
+                let texture_handle: Handle<Image> = asset_server.load(path.as_str());
+                loading.0.push(texture_handle.clone_untyped());
+                let mut block_identifier = block.namespace.to_owned();
+                block_identifier.push_str(&block.block_name.to_owned());
+                loadable_assets
+                    .block_textures
+                    .insert(block_identifier, texture_handle);
             }
-            *has_ran = true;
+            if let Some(model_path) = block.model.clone() {
+                let mut path = "blocks/".to_string();
+                path.push_str(block.block_name.as_str());
+                path.push('/');
+                path.push_str(model_path.as_str());
+                path.push_str("#Scene0");
+                let model_handle: Handle<Scene> = asset_server.load(model_path);
+                loading.0.push(model_handle.clone_untyped());
+                let mut block_identifier = block.namespace.to_owned();
+                block_identifier.push_str(&block.block_name.to_owned());
+                loadable_assets
+                    .block_models
+                    .insert(block_identifier, model_handle);
+            }
         }
+        *has_ran = true;
     }
 }
 
 pub fn load_sounds() {}
 
 pub fn load_entities(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut loading: ResMut<AssetsLoading>,
-    loadable_types: Res<LoadableTypes>,
+    _commands: Commands,
+    _asset_server: Res<AssetServer>,
+    _loading: ResMut<AssetsLoading>,
+    _loadable_types: Res<LoadableTypes>,
 ) {
 }
 

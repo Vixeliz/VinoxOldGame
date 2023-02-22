@@ -1,29 +1,27 @@
-use std::{io::Cursor, mem::size_of_val, time::Duration};
+use std::{io::Cursor, time::Duration};
 
 use bevy::{
-    math::Vec3Swizzles,
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use bevy_easings::{Ease, EaseMethod, EasingType};
-use bevy_rapier3d::prelude::*;
+
 use bevy_renet::renet::RenetClient;
-use block_mesh::ndshape::{ConstShape, ConstShape3u32};
+use block_mesh::ndshape::{ConstShape};
 use block_mesh::{
-    greedy_quads, visible_block_faces, GreedyQuadsBuffer, MergeVoxel, UnitQuadBuffer,
-    Voxel as MeshableVoxel, VoxelVisibility, RIGHT_HANDED_Y_UP_CONFIG,
+    visible_block_faces, UnitQuadBuffer, RIGHT_HANDED_Y_UP_CONFIG,
 };
 use common::{
     game::{
-        bundles::{ColliderBundle, PlayerBundleBuilder},
-        world::chunk::{ChunkShape, Voxel, CHUNK_SIZE},
+        bundles::{PlayerBundleBuilder},
+        world::chunk::{ChunkShape, CHUNK_SIZE},
     },
     networking::components::{
-        ClientChannel, EntityBuffer, LevelData, NetworkedEntities, Player, PlayerPos,
+        ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos,
         ServerChannel, ServerMessages,
     },
 };
-use zstd::stream::{copy_decode, read::Decoder};
+use zstd::stream::{copy_decode};
 
 use crate::{components::Game, states::game::networking::components::ControlledPlayer};
 
@@ -36,7 +34,7 @@ pub fn client_sync_players(
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut entity_buffer: ResMut<EntityBuffer>,
-    asset_server: Res<AssetServer>,
+    _asset_server: Res<AssetServer>,
     player_builder: Res<PlayerBundleBuilder>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -49,8 +47,8 @@ pub fn client_sync_players(
                 id,
                 translation,
                 entity,
-                yaw,
-                pitch,
+                yaw: _,
+                pitch: _,
             } => {
                 let mut client_entity = cmd1.spawn_empty();
                 if client_id == id {
@@ -69,7 +67,7 @@ pub fn client_sync_players(
                         .insert(player_builder.build(translation.into(), id, true))
                         .insert(ControlledPlayer);
                 } else {
-                    println!("Player {} connected.", id);
+                    println!("Player {id} connected.");
                     client_entity.insert(player_builder.build(translation.into(), id, false));
                 }
 
@@ -81,7 +79,7 @@ pub fn client_sync_players(
                 network_mapping.0.insert(entity, client_entity.id());
             }
             ServerMessages::PlayerRemove { id } => {
-                println!("Player {} disconnected.", id);
+                println!("Player {id} disconnected.");
                 if let Some(PlayerInfo {
                     server_entity,
                     client_entity,
@@ -107,7 +105,7 @@ pub fn client_sync_players(
         let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
-                println!("Recieved chunk {:?}", pos);
+                println!("Recieved chunk {pos:?}");
                 let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
                 // Simple meshing works on web and makes texture atlases easier. However I may look into greedy meshing in future
@@ -133,19 +131,17 @@ pub fn client_sync_players(
                         positions.extend_from_slice(&face.quad_mesh_positions(&quad.into(), 1.0));
                         normals.extend_from_slice(&face.quad_mesh_normals());
                         ao.extend_from_slice(&face.quad_mesh_ao(&quad.into()));
-                        let mut face_tex = face.tex_coords(
+                        let face_tex = face.tex_coords(
                             RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
                             true,
                             &quad.into(),
                         );
                         let [x, y, z] = quad.minimum;
                         let i = ChunkShape::linearize([x, y, z]);
-                        let voxel_type = chunk_data.voxels[i as usize];
-                        let tile_size = 64.0;
-                        let texture_size = 1024.0;
-                        match voxel_type {
-                            _ => {}
-                        }
+                        let _voxel_type = chunk_data.voxels[i as usize];
+                        let _tile_size = 64.0;
+                        let _texture_size = 1024.0;
+                        {}
                         tex_coords.extend_from_slice(&face_tex);
                     }
                 }
@@ -164,7 +160,7 @@ pub fn client_sync_players(
                     material: materials.add(StandardMaterial {
                         base_color: Color::WHITE,
                         // base_color_texture: Some(texture_handle.0.clone()),
-                        alpha_mode: AlphaMode::Mask((1.0)),
+                        alpha_mode: AlphaMode::Mask(1.0),
                         perceptual_roughness: 1.0,
                         ..default()
                     }),
@@ -209,7 +205,7 @@ fn ao_convert(ao: Vec<u8>, num_vertices: usize) -> Vec<[f32; 4]> {
             _ => res.extend_from_slice(&[[1., 1., 1., 1.0]]),
         }
     }
-    return res;
+    res
 }
 
 pub fn lerp_new_location(
@@ -227,7 +223,7 @@ pub fn lerp_new_location(
         {
             let translation = Vec3::from(entity_buffer.entities[0].translations[i]);
             let transform = Transform {
-                translation: translation,
+                translation,
                 rotation: Quat::from_euler(
                     EulerRot::ZYX,
                     0.0,
