@@ -32,7 +32,6 @@ pub fn server_update_system(
     mut lobby: ResMut<ServerLobby>,
     mut server: ResMut<RenetServer>,
     players: Query<(Entity, &Player, &Transform)>,
-    chunks: Query<&Chunk>,
     player_builder: Res<PlayerBundleBuilder>,
     mut chunk_manager: ChunkManager,
 ) {
