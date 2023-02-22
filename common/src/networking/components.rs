@@ -27,8 +27,7 @@ pub struct Player {
 #[derive(Debug, Serialize, Deserialize, Default)]
 pub struct PlayerPos {
     pub translation: [f32; 3],
-    pub yaw: f32,
-    pub pitch: f32,
+    pub rotation: [f32; 4],
 }
 
 // Networking related
@@ -36,8 +35,7 @@ pub struct PlayerPos {
 pub struct NetworkedEntities {
     pub entities: Vec<Entity>,
     pub translations: Vec<[f32; 3]>,
-    pub yaw: Vec<f32>,
-    pub pitch: Vec<f32>,
+    pub rotations: Vec<[f32; 4]>,
 }
 
 #[derive(Default, Resource)]
@@ -73,8 +71,7 @@ pub enum ServerMessages {
         entity: Entity,
         id: u64,
         translation: [f32; 3],
-        yaw: f32,
-        pitch: f32,
+        rotation: [f32; 4],
     },
     PlayerRemove {
         id: u64,

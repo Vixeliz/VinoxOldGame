@@ -48,8 +48,7 @@ pub fn client_sync_players(
                 id,
                 translation,
                 entity,
-                yaw: _,
-                pitch: _,
+                rotation,
             } => {
                 let mut client_entity = cmd1.spawn_empty();
                 if client_id == id {
@@ -71,6 +70,10 @@ pub fn client_sync_players(
                 } else {
                     println!("Player {id} connected.");
                     client_entity.insert(player_builder.build(translation.into(), id, false));
+                    client_entity.insert(
+                        Transform::from_translation(translation.into())
+                            .with_rotation(Quat::from_vec4(rotation.into())),
+                    );
                 }
 
                 let player_info = PlayerInfo {
@@ -223,16 +226,12 @@ pub fn lerp_new_location(
             .get(&entity_buffer.entities[0].entities[i])
         {
             let translation = Vec3::from(entity_buffer.entities[0].translations[i]);
+            let rotation = Quat::from_vec4(entity_buffer.entities[0].rotations[i].into());
             let transform = Transform {
                 translation,
-                rotation: Quat::from_euler(
-                    EulerRot::ZYX,
-                    0.0,
-                    entity_buffer.entities[0].yaw[i],
-                    0.,
-                ),
                 ..Default::default()
-            };
+            }
+            .with_rotation(rotation);
             if let Some(player_entity) = lobby.players.get(&client.client_id()) {
                 if player_entity.client_entity != *entity {
                     if let Ok(old_transform) = transform_query.get(*entity) {
@@ -258,16 +257,18 @@ pub fn lerp_new_location(
 
 pub fn client_send_naive_position(
     mut transform_query: Query<&mut Transform, With<ControlledPlayer>>,
+    mut camera_query: Query<&mut Transform, (With<Camera>, Without<ControlledPlayer>)>,
     mut client: ResMut<RenetClient>,
 ) {
     if let Ok(transform) = transform_query.get_single_mut() {
-        let player_pos = PlayerPos {
-            translation: transform.translation.into(),
-            yaw: transform.rotation.z,
-            pitch: transform.rotation.y,
-        };
-        let input_message = bincode::serialize(&player_pos).unwrap();
+        if let Ok(camera_transform) = camera_query.get_single_mut() {
+            let player_pos = PlayerPos {
+                translation: transform.translation.into(),
+                rotation: camera_transform.rotation.into(),
+            };
+            let input_message = bincode::serialize(&player_pos).unwrap();
 
-        client.send_message(ClientChannel::Position, input_message);
+            client.send_message(ClientChannel::Position, input_message);
+        }
     }
 }

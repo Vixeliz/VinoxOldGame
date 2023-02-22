@@ -43,12 +43,12 @@ pub fn server_update_system(
                 // Initialize other players for this new client
                 for (entity, player, transform) in players.iter() {
                     let translation: [f32; 3] = Vec3::from(transform.translation).into();
+                    let rotation: [f32; 4] = Vec4::from(transform.rotation).into();
                     let message = bincode::serialize(&ServerMessages::PlayerCreate {
                         id: player.id,
                         entity,
                         translation,
-                        yaw: 0.0,
-                        pitch: 0.0,
+                        rotation,
                     })
                     .unwrap();
                     server.send_message(*id, ServerChannel::ServerMessages, message);
@@ -63,12 +63,12 @@ pub fn server_update_system(
                 lobby.players.insert(*id, player_entity);
 
                 let translation: [f32; 3] = transform.translation.into();
+                let rotation: [f32; 4] = transform.rotation.into();
                 let message = bincode::serialize(&ServerMessages::PlayerCreate {
                     id: *id,
                     entity: player_entity,
                     translation,
-                    yaw: 0.0,
-                    pitch: 0.0,
+                    rotation,
                 })
                 .unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
@@ -117,9 +117,8 @@ pub fn server_update_system(
             let transform: PlayerPos = bincode::deserialize(&message).unwrap();
             if let Some(player_entity) = lobby.players.get(&client_id) {
                 commands.entity(*player_entity).insert(
-                    Transform::from_translation(transform.translation.into()).with_rotation(
-                        Quat::from_euler(EulerRot::ZYX, 0.0, transform.yaw, transform.pitch),
-                    ),
+                    Transform::from_translation(transform.translation.into())
+                        .with_rotation(Quat::from_vec4(transform.rotation.into())),
                 );
             }
         }
@@ -135,8 +134,7 @@ pub fn server_network_sync(mut server: ResMut<RenetServer>, query: Query<(Entity
         networked_entities
             .translations
             .push(transform.translation.into());
-        networked_entities.yaw.push(0.0);
-        networked_entities.pitch.push(0.0);
+        networked_entities.rotations.push(transform.rotation.into());
     }
 
     let sync_message = bincode::serialize(&networked_entities).unwrap();
