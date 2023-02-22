@@ -1,3 +1,8 @@
+use std::{
+    io::{Cursor, Write},
+    mem::size_of_val,
+};
+
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
@@ -6,6 +11,10 @@ use common::{
         ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages,
     },
+};
+use zstd::stream::{
+    copy_decode, copy_encode,
+    write::{Decoder, Encoder},
 };
 
 use crate::game::world::{
@@ -68,12 +77,19 @@ pub fn server_update_system(
                 chunk_manager.add_point(chunk_pos);
                 for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
                     let raw_chunk = chunk.chunk_data.clone();
-                    let chunk_message = bincode::serialize(&LevelData::ChunkCreate {
-                        chunk_data: raw_chunk,
+                    if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
+                        chunk_data: raw_chunk.clone(),
                         pos: chunk.pos.into(),
-                    })
-                    .unwrap();
-                    server.send_message(*id, ServerChannel::LevelData, chunk_message);
+                    }) {
+                        let mut final_chunk = Cursor::new(raw_chunk_bin);
+                        let mut output = Cursor::new(Vec::new());
+                        copy_encode(&mut final_chunk, &mut output, 0).unwrap();
+                        server.send_message(
+                            *id,
+                            ServerChannel::LevelData,
+                            output.get_ref().clone(),
+                        );
+                    }
                 }
             }
             ServerEvent::ClientDisconnected(id) => {

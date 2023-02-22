@@ -22,10 +22,12 @@ pub struct Chunk {
 }
 
 #[derive(Copy, Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Voxel(pub (u16, bool)); // Having this bool is mildly annoying but i'm not sure of a better way to do this
+pub struct Voxel {
+    pub value: u16,
+}
 
 impl Voxel {
-    pub const EMPTY_VOXEL: Voxel = Voxel((0, false));
+    pub const EMPTY_VOXEL: Voxel = Voxel { value: 0 };
 }
 
 impl MergeVoxel for Voxel {
@@ -34,11 +36,11 @@ impl MergeVoxel for Voxel {
 
     #[inline]
     fn merge_value(&self) -> Self::MergeValue {
-        self.0 .0
+        self.value
     }
     #[inline]
     fn merge_value_facing_neighbour(&self) -> Self::MergeValueFacingNeighbour {
-        self.0 .0 * 2
+        self.value * 2
     }
 }
 
@@ -53,13 +55,7 @@ impl MeshableVoxel for Voxel {
     fn get_visibility(&self) -> block_mesh::VoxelVisibility {
         match *self {
             Self::EMPTY_VOXEL => block_mesh::VoxelVisibility::Empty,
-            _ => {
-                if self.0 .1 {
-                    block_mesh::VoxelVisibility::Opaque
-                } else {
-                    block_mesh::VoxelVisibility::Translucent
-                }
-            }
+            _ => block_mesh::VoxelVisibility::Opaque,
         }
     }
 }
@@ -70,11 +66,22 @@ pub type ChunkShape = ConstShape3u32<
     { (CHUNK_SIZE + 1) as u32 },
 >;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
     #[serde(with = "BigArray")]
     pub voxels: [Voxel; TOTAL_CHUNK_SIZE as usize],
+}
+
+impl Default for RawChunk {
+    fn default() -> RawChunk {
+        let mut raw_chunk = RawChunk {
+            palette: Vec::new(),
+            voxels: [Voxel { value: 0 }; TOTAL_CHUNK_SIZE as usize],
+        };
+        raw_chunk.palette.push("air".to_string());
+        raw_chunk
+    }
 }
 
 impl RawChunk {
@@ -82,7 +89,7 @@ impl RawChunk {
     pub fn new() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: [Voxel((0, false)); TOTAL_CHUNK_SIZE as usize],
+            voxels: [Voxel { value: 0 }; TOTAL_CHUNK_SIZE as usize],
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -108,15 +115,13 @@ impl RawChunk {
     // rewrite this if it causes major performance issues
     pub fn update_chunk_pal(&mut self, old_vec: &Vec<String>) {
         for i in 0..self.voxels.len() {
-            if let Some(block_data) = old_vec.get(self.voxels[i].0 .0 as usize) {
+            if let Some(block_data) = old_vec.get(self.voxels[i].value as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
-                    if block_data.eq("air") {
-                        self.voxels[i] = Voxel((new_index as u16, false)); // TODO: Transluency
-                    } else {
-                        self.voxels[i] = Voxel((new_index as u16, true)); // TODO: Transluency
-                    }
+                    self.voxels[i] = Voxel {
+                        value: new_index as u16,
+                    }; // TODO: Transluency
                 } else {
-                    self.voxels[i] = Voxel((0, false));
+                    self.voxels[i] = Voxel { value: 0 };
                 }
             }
         }
@@ -154,11 +159,9 @@ impl RawChunk {
         {
             let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
             if let Some(block_type) = self.get_index_for_state(&block_data) {
-                if block_data.eq("air") {
-                    self.voxels[index] = Voxel((block_type as u16, false)); // TODO: Set translucent based off of block
-                } else {
-                    self.voxels[index] = Voxel((block_type as u16, true)); // TODO: Set translucent based off of block
-                }
+                self.voxels[index] = Voxel {
+                    value: block_type as u16,
+                }; // TODO: Set translucent based off of block
             } else {
                 warn!("Voxel doesn't exist");
             }
@@ -175,7 +178,7 @@ impl RawChunk {
             && pos.z < (CHUNK_SIZE + 1) as u32
         {
             let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
-            if let Some(block_state) = self.get_state_for_index(self.voxels[index].0 .0 as usize) {
+            if let Some(block_state) = self.get_state_for_index(self.voxels[index].value as usize) {
                 Some(block_state)
             } else {
                 None

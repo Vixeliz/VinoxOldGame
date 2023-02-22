@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{io::Cursor, mem::size_of_val, time::Duration};
 
 use bevy::{
     math::Vec3Swizzles,
@@ -23,6 +23,7 @@ use common::{
         ServerChannel, ServerMessages,
     },
 };
+use zstd::stream::{copy_decode, read::Decoder};
 
 use crate::{components::Game, states::game::networking::components::ControlledPlayer};
 
@@ -101,7 +102,9 @@ pub fn client_sync_players(
     }
 
     while let Some(message) = client.receive_message(ServerChannel::LevelData) {
-        let level_data: LevelData = bincode::deserialize(&message).unwrap();
+        let mut temp_output = Cursor::new(Vec::new());
+        copy_decode(&message[..], &mut temp_output).unwrap();
+        let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
                 println!("Recieved chunk {:?}", pos);
@@ -141,31 +144,7 @@ pub fn client_sync_players(
                         let tile_size = 64.0;
                         let texture_size = 1024.0;
                         match voxel_type {
-                            Voxel((1, true)) => {
-                                let tile_offset = 10.0;
-                                face_tex[0][0] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[0][1] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[1][0] = (tile_offset * tile_size) / texture_size;
-                                face_tex[1][1] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[2][0] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[2][1] = (tile_offset * tile_size) / texture_size;
-                                face_tex[3][0] = (tile_offset * tile_size) / texture_size;
-                                face_tex[3][1] = (tile_offset * tile_size) / texture_size;
-                            }
-                            Voxel((2, true)) => {
-                                let tile_offset = 16.0;
-                                face_tex[0][0] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[0][1] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[1][0] = (tile_offset * tile_size) / texture_size;
-                                face_tex[1][1] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[2][0] = ((tile_offset - 1.0) * tile_size) / texture_size;
-                                face_tex[2][1] = (tile_offset * tile_size) / texture_size;
-                                face_tex[3][0] = (tile_offset * tile_size) / texture_size;
-                                face_tex[3][1] = (tile_offset * tile_size) / texture_size;
-                            }
-                            _ => {
-                                println!("What");
-                            }
+                            _ => {}
                         }
                         tex_coords.extend_from_slice(&face_tex);
                     }

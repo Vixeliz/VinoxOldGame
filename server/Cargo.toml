@@ -19,4 +19,5 @@ directories = {workspace=true}
 noise = "0.8.2"
 futures-lite = "1.12.0"
 rand = "0.8.5"
+zstd = "0.12.3"
 
