@@ -96,19 +96,14 @@ impl RawChunk {
     }
 
     pub fn get_index_for_state(&self, block_data: &String) -> Option<usize> {
-        if let Some(index) = self.palette.iter().position(|i| i.eq(block_data)) {
-            Some(index)
-        } else {
-            None
-        }
+        self.palette
+            .iter()
+            .position(|i| i.eq(block_data))
+            .map(|index| index)
     }
 
     pub fn get_state_for_index(&self, index: usize) -> Option<String> {
-        if let Some(state) = self.palette.get(index) {
-            Some(state.to_owned())
-        } else {
-            None
-        }
+        self.palette.get(index).map(|state| state.to_owned())
     }
 
     // This is most likely a VERY awful way to handle this however for now I just want a working solution ill
@@ -151,11 +146,11 @@ impl RawChunk {
     // This actual chunks data starts at 1,1,1 and ends at chunk_size - 1
     pub fn set_block(&mut self, pos: UVec3, block_data: String) {
         if pos.x > 0
-            && pos.x < (CHUNK_SIZE + 1) as u32
+            && pos.x < (CHUNK_SIZE) as u32
             && pos.y > 0
-            && pos.y < (CHUNK_SIZE + 1) as u32
+            && pos.y < (CHUNK_SIZE) as u32
             && pos.z > 0
-            && pos.z < (CHUNK_SIZE + 1) as u32
+            && pos.z < (CHUNK_SIZE) as u32
         {
             let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
             if let Some(block_type) = self.get_index_for_state(&block_data) {
@@ -171,18 +166,15 @@ impl RawChunk {
     }
     pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
         if pos.x > 0
-            && pos.x < (CHUNK_SIZE + 1) as u32
+            && pos.x < (CHUNK_SIZE) as u32
             && pos.y > 0
-            && pos.y < (CHUNK_SIZE + 1) as u32
+            && pos.y < (CHUNK_SIZE) as u32
             && pos.z > 0
-            && pos.z < (CHUNK_SIZE + 1) as u32
+            && pos.z < (CHUNK_SIZE) as u32
         {
             let index = ChunkShape::linearize([pos.x, pos.y, pos.z]) as usize;
-            if let Some(block_state) = self.get_state_for_index(self.voxels[index].value as usize) {
-                Some(block_state)
-            } else {
-                None
-            }
+            self.get_state_for_index(self.voxels[index].value as usize)
+                .map(|block_state| block_state)
         } else {
             warn!("Voxel position outside of this chunks bounds");
             None

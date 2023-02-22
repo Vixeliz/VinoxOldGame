@@ -36,12 +36,11 @@ pub struct PlayerBundle {
 
 impl PlayerBundleBuilder {
     pub fn build(&self, translation: Vec3, id: u64, local: bool) -> PlayerBundle {
-        let handle;
-        if local {
-            handle = self.local_model.clone();
+        let handle = if local {
+            self.local_model.clone()
         } else {
-            handle = self.default_model.clone();
-        }
+            self.default_model.clone()
+        };
         PlayerBundle {
             collider: ColliderBundle {
                 collider: Collider::cuboid(

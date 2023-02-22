@@ -7,21 +7,19 @@ use bevy::{
 use bevy_easings::{Ease, EaseMethod, EasingType};
 
 use bevy_renet::renet::RenetClient;
-use block_mesh::ndshape::{ConstShape};
-use block_mesh::{
-    visible_block_faces, UnitQuadBuffer, RIGHT_HANDED_Y_UP_CONFIG,
-};
+use block_mesh::ndshape::ConstShape;
+use block_mesh::{visible_block_faces, UnitQuadBuffer, RIGHT_HANDED_Y_UP_CONFIG};
 use common::{
     game::{
-        bundles::{PlayerBundleBuilder},
+        bundles::PlayerBundleBuilder,
         world::chunk::{ChunkShape, CHUNK_SIZE},
     },
     networking::components::{
-        ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos,
-        ServerChannel, ServerMessages,
+        ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
+        ServerMessages,
     },
 };
-use zstd::stream::{copy_decode};
+use zstd::stream::copy_decode;
 
 use crate::{components::Game, states::game::networking::components::ControlledPlayer};
 
@@ -114,7 +112,7 @@ pub fn client_sync_players(
                     &chunk_data.voxels,
                     &ChunkShape {},
                     [0; 3],
-                    [21; 3],
+                    [CHUNK_SIZE as u32; 3],
                     &faces,
                     &mut buffer,
                 );
@@ -165,9 +163,9 @@ pub fn client_sync_players(
                         ..default()
                     }),
                     transform: Transform::from_translation(Vec3::new(
-                        (pos[0] * (CHUNK_SIZE) as i32) as f32,
-                        (pos[1] * (CHUNK_SIZE) as i32) as f32,
-                        (pos[2] * (CHUNK_SIZE) as i32) as f32,
+                        (pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
                     )),
                     ..Default::default()
                 });

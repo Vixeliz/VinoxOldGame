@@ -168,7 +168,6 @@ pub fn process_queue(
             (
                 chunk_pos,
                 ChunkGenTask(task_pool.spawn(async move {
-                    
                     Chunk {
                         pos: chunk_pos,
                         chunk_data: generate_chunk(chunk_pos, 0),

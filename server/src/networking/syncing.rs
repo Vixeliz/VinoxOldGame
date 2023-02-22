@@ -1,23 +1,25 @@
 use std::{
-    io::{Cursor},
+    io::{Cursor, Write},
     mem::size_of_val,
 };
 
-use bevy::{prelude::*};
+use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::{bundles::PlayerBundleBuilder},
+    game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
     networking::components::{
         ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages,
     },
 };
 use zstd::stream::{
-    copy_encode,
+    copy_decode, copy_encode,
+    write::{Decoder, Encoder},
 };
 
 use crate::game::world::{
-    chunk::{ChunkManager},
+    chunk::{ChunkManager, CurrentChunks},
+    generation::generate_chunk,
 };
 
 use super::components::ServerLobby;
@@ -36,11 +38,11 @@ pub fn server_update_system(
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
-                println!("Player {id} connected.");
+                println!("Player {} connected.", id);
 
                 // Initialize other players for this new client
                 for (entity, player, transform) in players.iter() {
-                    let translation: [f32; 3] = transform.translation.into();
+                    let translation: [f32; 3] = Vec3::from(transform.translation).into();
                     let message = bincode::serialize(&ServerMessages::PlayerCreate {
                         id: player.id,
                         entity,
@@ -81,7 +83,6 @@ pub fn server_update_system(
                         let mut final_chunk = Cursor::new(raw_chunk_bin);
                         let mut output = Cursor::new(Vec::new());
                         copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                        println!("{}", size_of_val(output.get_ref().as_slice()));
                         if size_of_val(output.get_ref().as_slice()) <= 10000 {
                             server.send_message(
                                 *id,
@@ -99,7 +100,7 @@ pub fn server_update_system(
                 }
             }
             ServerEvent::ClientDisconnected(id) => {
-                println!("Player {id} disconnected.");
+                println!("Player {} disconnected.", id);
                 if let Some(player_entity) = lobby.players.remove(id) {
                     commands.entity(player_entity).despawn();
                 }
