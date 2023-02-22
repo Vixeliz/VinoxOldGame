@@ -1,25 +1,23 @@
 use std::{
-    io::{Cursor, Write},
+    io::{Cursor},
     mem::size_of_val,
 };
 
-use bevy::{math::Vec3Swizzles, prelude::*};
+use bevy::{prelude::*};
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
+    game::{bundles::PlayerBundleBuilder},
     networking::components::{
         ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages,
     },
 };
 use zstd::stream::{
-    copy_decode, copy_encode,
-    write::{Decoder, Encoder},
+    copy_encode,
 };
 
 use crate::game::world::{
-    chunk::{ChunkManager, CurrentChunks},
-    generation::generate_chunk,
+    chunk::{ChunkManager},
 };
 
 use super::components::ServerLobby;
@@ -38,11 +36,11 @@ pub fn server_update_system(
     for event in server_events.iter() {
         match event {
             ServerEvent::ClientConnected(id, _) => {
-                println!("Player {} connected.", id);
+                println!("Player {id} connected.");
 
                 // Initialize other players for this new client
                 for (entity, player, transform) in players.iter() {
-                    let translation: [f32; 3] = Vec3::from(transform.translation).into();
+                    let translation: [f32; 3] = transform.translation.into();
                     let message = bincode::serialize(&ServerMessages::PlayerCreate {
                         id: player.id,
                         entity,
@@ -101,7 +99,7 @@ pub fn server_update_system(
                 }
             }
             ServerEvent::ClientDisconnected(id) => {
-                println!("Player {} disconnected.", id);
+                println!("Player {id} disconnected.");
                 if let Some(player_entity) = lobby.players.remove(id) {
                     commands.entity(player_entity).despawn();
                 }

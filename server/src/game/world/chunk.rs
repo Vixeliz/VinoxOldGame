@@ -24,7 +24,7 @@ impl CurrentChunks {
     }
 
     pub fn get_entity(&self, pos: IVec3) -> Option<Entity> {
-        self.chunks.get(&pos).map(|x| x.clone())
+        self.chunks.get(&pos).copied()
     }
 }
 
@@ -124,7 +124,7 @@ pub fn generate_chunks_world(
     view_distance: Res<ViewDistance>,
     current_load_points: Res<CurrentLoadPoints>,
     mut chunk_queue: ResMut<ChunkQueue>,
-    mut current_chunks: ResMut<CurrentChunks>,
+    current_chunks: ResMut<CurrentChunks>,
 ) {
     for point in current_load_points.points.iter() {
         for x in -view_distance.width / 2..view_distance.width / 2 {
@@ -168,13 +168,13 @@ pub fn process_queue(
             (
                 chunk_pos,
                 ChunkGenTask(task_pool.spawn(async move {
-                    let chunk = Chunk {
+                    
+                    Chunk {
                         pos: chunk_pos,
                         chunk_data: generate_chunk(chunk_pos, 0),
                         dirty: false,
                         entities: Vec::new(),
-                    };
-                    chunk
+                    }
                 })),
             )
         })
