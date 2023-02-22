@@ -84,11 +84,20 @@ pub fn server_update_system(
                         let mut final_chunk = Cursor::new(raw_chunk_bin);
                         let mut output = Cursor::new(Vec::new());
                         copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                        server.send_message(
-                            *id,
-                            ServerChannel::LevelData,
-                            output.get_ref().clone(),
-                        );
+                        println!("{}", size_of_val(output.get_ref().as_slice()));
+                        if size_of_val(output.get_ref().as_slice()) <= 10000 {
+                            server.send_message(
+                                *id,
+                                ServerChannel::LevelDataSmall,
+                                output.get_ref().clone(),
+                            );
+                        } else {
+                            server.send_message(
+                                *id,
+                                ServerChannel::LevelDataLarge,
+                                output.get_ref().clone(),
+                            );
+                        }
                     }
                 }
             }

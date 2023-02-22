@@ -53,7 +53,8 @@ pub enum ClientChannel {
 pub enum ServerChannel {
     ServerMessages,
     NetworkedEntities,
-    LevelData,
+    LevelDataSmall,
+    LevelDataLarge,
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -124,8 +125,14 @@ impl ServerChannel {
             }
             .into(),
             ChunkChannelConfig {
-                channel_id: Self::LevelData.into(),
+                channel_id: Self::LevelDataLarge.into(),
                 message_send_queue_size: 700,
+                ..Default::default()
+            }
+            .into(),
+            ReliableChannelConfig {
+                channel_id: Self::LevelDataSmall.into(),
+                message_resend_time: Duration::from_millis(100),
                 ..Default::default()
             }
             .into(),
@@ -138,7 +145,8 @@ impl From<ServerChannel> for u8 {
         match channel_id {
             ServerChannel::NetworkedEntities => 0,
             ServerChannel::ServerMessages => 1,
-            ServerChannel::LevelData => 2,
+            ServerChannel::LevelDataLarge => 2,
+            ServerChannel::LevelDataSmall => 3,
         }
     }
 }

@@ -101,7 +101,7 @@ pub fn client_sync_players(
         entity_buffer.entities[arr_len] = networked_entities;
     }
 
-    while let Some(message) = client.receive_message(ServerChannel::LevelData) {
+    while let Some(message) = client.receive_message(ServerChannel::LevelDataSmall) {
         let mut temp_output = Cursor::new(Vec::new());
         copy_decode(&message[..], &mut temp_output).unwrap();
         let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
