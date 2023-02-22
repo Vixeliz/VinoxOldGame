@@ -45,6 +45,6 @@ impl Plugin for GamePlugin {
                 syncing::client_send_naive_position.run_in_state(GameState::Game),
             )
             .add_system(syncing::lerp_new_location.run_in_state(GameState::Game))
-            .add_system(input::move_player.run_in_state(GameState::Game));
+            .add_system(input::camera_controller.run_in_state(GameState::Game));
     }
 }

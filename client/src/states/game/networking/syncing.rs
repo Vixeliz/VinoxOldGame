@@ -21,7 +21,10 @@ use common::{
 };
 use zstd::stream::copy_decode;
 
-use crate::{components::Game, states::game::networking::components::ControlledPlayer};
+use crate::{
+    components::Game,
+    states::game::{input::CameraController, networking::components::ControlledPlayer},
+};
 
 use super::components::{ClientLobby, NetworkMapping, PlayerInfo};
 
@@ -58,6 +61,7 @@ pub fn client_sync_players(
                                 transform: Transform::from_translation(Vec3::new(0.0, 1.0, 0.0)),
                                 ..default()
                             },
+                            CameraController::default(),
                         ))
                         .id();
                     client_entity.push_children(&[camera_id]);
