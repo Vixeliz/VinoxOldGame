@@ -107,8 +107,11 @@ pub fn setup_resources(
 ) {
     let player_handle = asset_server.load("player.gltf#Scene0");
     loading.0.push(player_handle.clone_untyped());
+    let player_hands_handle = asset_server.load("hands.gltf#Scene0");
+    loading.0.push(player_hands_handle.clone_untyped());
     commands.insert_resource(PlayerBundleBuilder {
         default_model: player_handle,
+        local_model: player_hands_handle,
         model_aabb: Aabb {
             half_extents: Vec3A::new(0.25, 1.0, 0.2),
             ..default()

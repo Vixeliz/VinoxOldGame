@@ -58,18 +58,18 @@ pub fn client_sync_players(
                         .spawn((
                             Game,
                             Camera3dBundle {
-                                transform: Transform::from_translation(Vec3::new(-1.0, 0.0, -1.0)),
+                                transform: Transform::from_translation(Vec3::new(0.0, 1.0, 0.0)),
                                 ..default()
                             },
                         ))
                         .id();
                     client_entity.push_children(&[camera_id]);
                     client_entity
-                        .insert(player_builder.build(translation.into(), id))
+                        .insert(player_builder.build(translation.into(), id, true))
                         .insert(ControlledPlayer);
                 } else {
                     println!("Player {} connected.", id);
-                    client_entity.insert(player_builder.build(translation.into(), id));
+                    client_entity.insert(player_builder.build(translation.into(), id, false));
                 }
 
                 let player_info = PlayerInfo {

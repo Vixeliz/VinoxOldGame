@@ -1,5 +1,5 @@
 use crate::networking::components::Player;
-use bevy::{math::Vec2Swizzles, prelude::*, gltf::Gltf, render::primitives::Aabb};
+use bevy::{gltf::Gltf, math::Vec2Swizzles, prelude::*, render::primitives::Aabb};
 use bevy_rapier3d::{prelude::*, rapier::prelude::InteractionGroups};
 
 #[derive(Resource, Default)]
@@ -13,13 +13,14 @@ pub struct ColliderBundle {
     pub friction: Friction,
     pub density: ColliderMassProperties,
     pub rotation_constraints: LockedAxes,
-    pub collision_groups: CollisionGroups
+    pub collision_groups: CollisionGroups,
 }
 
 #[derive(Resource, Default)]
 pub struct PlayerBundleBuilder {
     pub default_model: Handle<Scene>,
-    pub model_aabb: Aabb
+    pub local_model: Handle<Scene>,
+    pub model_aabb: Aabb,
 }
 
 #[derive(Default, Bundle)]
@@ -30,24 +31,37 @@ pub struct PlayerBundle {
     #[bundle]
     pub collider: ColliderBundle,
     #[bundle]
-    pub scene_bundle: SceneBundle, 
+    pub scene_bundle: SceneBundle,
 }
 
 impl PlayerBundleBuilder {
-    pub fn build(&self, translation: Vec3, id: u64) -> PlayerBundle {
+    pub fn build(&self, translation: Vec3, id: u64, local: bool) -> PlayerBundle {
+        let handle;
+        if local {
+            handle = self.local_model.clone();
+        } else {
+            handle = self.default_model.clone();
+        }
         PlayerBundle {
             collider: ColliderBundle {
-                collider: Collider::cuboid(self.model_aabb.half_extents.x, self.model_aabb.half_extents.y, self.model_aabb.half_extents.z),
+                collider: Collider::cuboid(
+                    self.model_aabb.half_extents.x,
+                    self.model_aabb.half_extents.y,
+                    self.model_aabb.half_extents.z,
+                ),
                 rigid_body: RigidBody::Dynamic,
                 rotation_constraints: LockedAxes::ROTATION_LOCKED,
-                collision_groups: CollisionGroups::new(Group::GROUP_1, Group::from_bits_truncate(Group::GROUP_2.bits())),
+                collision_groups: CollisionGroups::new(
+                    Group::GROUP_1,
+                    Group::from_bits_truncate(Group::GROUP_2.bits()),
+                ),
                 ..Default::default()
             },
             player_tag: Player { id },
             scene_bundle: SceneBundle {
-                scene: self.default_model.clone(),
+                scene: handle,
                 transform: Transform::from_translation(translation),
-                ..default() 
+                ..default()
             },
             ..Default::default()
         }

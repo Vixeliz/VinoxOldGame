@@ -50,7 +50,7 @@ pub fn server_update_system(
                 let transform = Transform::from_xyz(0.0, 0.0, -10.0);
                 // let player_entity = commands.spawn((transform, Player { id: *id })).id();
                 let player_entity = commands
-                    .spawn(player_builder.build(transform.translation, *id))
+                    .spawn(player_builder.build(transform.translation, *id, false))
                     .id();
                 lobby.players.insert(*id, player_entity);
 
