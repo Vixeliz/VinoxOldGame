@@ -49,6 +49,9 @@ pub fn switch(
     client: Res<RenetClient>,
     loading: Res<AssetsLoading>,
     asset_server: Res<AssetServer>,
+    mut loadable_assets: ResMut<LoadableAssets>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+    mut textures: ResMut<Assets<Image>>,
 ) {
     match asset_server.get_group_load_state(loading.0.iter().map(|h| h.id)) {
         LoadState::Failed => {
@@ -56,6 +59,19 @@ pub fn switch(
         }
         LoadState::Loaded => {
             if client.is_connected() {
+                let mut texture_atlas_builder = TextureAtlasBuilder::default();
+                for handle in loadable_assets.block_textures.values() {
+                    let Some(texture) = textures.get(&handle[0]) else {
+            warn!("{:?} did not resolve to an `Image` asset.", asset_server.get_handle_path(&handle[0]));
+            continue;
+        };
+
+                    texture_atlas_builder.add_texture(handle[0].clone(), texture);
+                }
+
+                let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
+                let atlas_handle = texture_atlases.add(texture_atlas);
+                loadable_assets.block_atlas = atlas_handle;
                 commands.insert_resource(NextState(GameState::Game));
             }
             // remove the resource to drop the tracking handles
@@ -118,8 +134,9 @@ pub struct LoadableTypes {
 #[derive(Resource, Default)]
 pub struct LoadableAssets {
     pub block_models: HashMap<String, Handle<Scene>>,
-    pub block_textures: HashMap<String, Handle<Image>>,
+    pub block_textures: HashMap<String, [Handle<Image>; 6]>,
     pub entity_models: HashMap<String, Handle<Scene>>,
+    pub block_atlas: Handle<TextureAtlas>,
 }
 
 pub fn load_blocks(
@@ -142,9 +159,17 @@ pub fn load_blocks(
                 loading.0.push(texture_handle.clone_untyped());
                 let mut block_identifier = block.namespace.to_owned();
                 block_identifier.push_str(&block.block_name.to_owned());
+                let texture_array = [
+                    texture_handle.clone(),
+                    texture_handle.clone(),
+                    texture_handle.clone(),
+                    texture_handle.clone(),
+                    texture_handle.clone(),
+                    texture_handle.clone(),
+                ];
                 loadable_assets
                     .block_textures
-                    .insert(block_identifier, texture_handle);
+                    .insert(block_identifier, texture_array);
             }
             if let Some(model_path) = block.model.clone() {
                 let mut path = "blocks/".to_string();

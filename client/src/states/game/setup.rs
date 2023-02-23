@@ -13,19 +13,9 @@ use crate::{
 };
 
 pub fn setup(mut commands: Commands) {
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 3000.0,
-            color: Color::WHITE,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(0.0, 10.0, 5.0),
-        ..default()
-    });
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
-        brightness: 0.5,
+        brightness: 0.75,
     });
 }
 

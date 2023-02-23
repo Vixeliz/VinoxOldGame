@@ -23,11 +23,15 @@ use zstd::stream::copy_decode;
 
 use crate::{
     components::Game,
-    states::game::{input::CameraController, networking::components::ControlledPlayer},
+    states::{
+        game::{input::CameraController, networking::components::ControlledPlayer},
+        loading::LoadableAssets,
+    },
 };
 
 use super::components::{ClientLobby, NetworkMapping, PlayerInfo};
 
+//TODO: Refactor this is a lot in one function
 pub fn client_sync_players(
     mut cmd1: Commands,
     mut cmd2: Commands,
@@ -39,6 +43,8 @@ pub fn client_sync_players(
     player_builder: Res<PlayerBundleBuilder>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut loadable_assets: ResMut<LoadableAssets>,
+    texture_atlas: Res<Assets<TextureAtlas>>,
 ) {
     let client_id = client.client_id();
     while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
@@ -112,7 +118,6 @@ pub fn client_sync_players(
             LevelData::ChunkCreate { chunk_data, pos } => {
                 println!("Recieved chunk {pos:?}");
                 let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
-
                 // Simple meshing works on web and makes texture atlases easier. However I may look into greedy meshing in future
                 let mut buffer = UnitQuadBuffer::new();
                 visible_block_faces(
@@ -136,17 +141,31 @@ pub fn client_sync_players(
                         positions.extend_from_slice(&face.quad_mesh_positions(&quad.into(), 1.0));
                         normals.extend_from_slice(&face.quad_mesh_normals());
                         ao.extend_from_slice(&face.quad_mesh_ao(&quad.into()));
-                        let face_tex = face.tex_coords(
+                        let mut face_tex = face.tex_coords(
                             RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
                             true,
                             &quad.into(),
                         );
                         let [x, y, z] = quad.minimum;
                         let i = ChunkShape::linearize([x, y, z]);
-                        let _voxel_type = chunk_data.voxels[i as usize];
-                        let _tile_size = 64.0;
-                        let _texture_size = 1024.0;
-                        {}
+                        let voxel_type = chunk_data.voxels[i as usize];
+                        let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
+                        let texture_index = block_atlas.get_texture_index(
+                            &loadable_assets
+                                .block_textures
+                                .get(
+                                    &chunk_data
+                                        .get_state_for_index(voxel_type.value as usize)
+                                        .unwrap(),
+                                )
+                                .unwrap()[0],
+                        );
+                        calculate_coords(
+                            &mut face_tex,
+                            texture_index.unwrap(),
+                            Vec2::new(16.0, 16.0),
+                            block_atlas.size,
+                        );
                         tex_coords.extend_from_slice(&face_tex);
                     }
                 }
@@ -164,7 +183,13 @@ pub fn client_sync_players(
                     mesh: meshes.add(render_mesh.clone()),
                     material: materials.add(StandardMaterial {
                         base_color: Color::WHITE,
-                        // base_color_texture: Some(texture_handle.0.clone()),
+                        base_color_texture: Some(
+                            texture_atlas
+                                .get(&loadable_assets.block_atlas)
+                                .unwrap()
+                                .texture
+                                .clone(),
+                        ),
                         alpha_mode: AlphaMode::Mask(1.0),
                         perceptual_roughness: 1.0,
                         ..default()
@@ -253,6 +278,30 @@ pub fn lerp_new_location(
             }
         }
     }
+}
+
+pub fn calculate_coords(
+    face_tex: &mut [[f32; 2]; 4],
+    index: usize,
+    tile_size: Vec2,
+    tilesheet_size: Vec2,
+) {
+    let mut index = index as f32;
+    // We need to start at 1.0 for calculations
+    index += 1.0;
+    let max_y = (tile_size.y) / tilesheet_size.y;
+    face_tex[0][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    // face_tex[0][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    face_tex[0][1] = 0.0;
+    face_tex[1][0] = (index * tile_size.x) / tilesheet_size.x;
+    // face_tex[1][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    face_tex[1][1] = 0.0;
+    face_tex[2][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    // face_tex[2][1] = (index * tile_size.x) / tilesheet_size.x;
+    face_tex[2][1] = max_y;
+    face_tex[3][0] = (index * tile_size.x) / tilesheet_size.x;
+    // face_tex[3][1] = (index * tile_size.x) / tilesheet_size.x;
+    face_tex[3][1] = max_y;
 }
 
 pub fn client_send_naive_position(
