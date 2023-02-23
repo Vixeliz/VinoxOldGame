@@ -48,7 +48,7 @@ impl PlayerBundleBuilder {
                     self.model_aabb.half_extents.y,
                     self.model_aabb.half_extents.z,
                 ),
-                rigid_body: RigidBody::Dynamic,
+                rigid_body: RigidBody::KinematicVelocityBased,
                 rotation_constraints: LockedAxes::ROTATION_LOCKED,
                 collision_groups: CollisionGroups::new(
                     Group::GROUP_1,

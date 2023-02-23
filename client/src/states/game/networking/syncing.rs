@@ -6,13 +6,14 @@ use bevy::{
 };
 use bevy_easings::{Ease, EaseMethod, EasingType};
 
+use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
 use bevy_renet::renet::RenetClient;
 use block_mesh::ndshape::ConstShape;
 use block_mesh::{visible_block_faces, UnitQuadBuffer, RIGHT_HANDED_Y_UP_CONFIG};
 use common::{
     game::{
         bundles::PlayerBundleBuilder,
-        world::chunk::{ChunkShape, CHUNK_SIZE},
+        world::chunk::{Chunk, ChunkShape, CHUNK_SIZE},
     },
     networking::components::{
         ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
@@ -24,7 +25,10 @@ use zstd::stream::copy_decode;
 use crate::{
     components::Game,
     states::{
-        game::{input::CameraController, networking::components::ControlledPlayer},
+        game::{
+            input::CameraController, networking::components::ControlledPlayer,
+            world::chunk::RenderedChunk,
+        },
         loading::LoadableAssets,
     },
 };
@@ -173,33 +177,48 @@ pub fn client_sync_players(
                 let finalao = ao_convert(ao, num_vertices);
                 let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
-                render_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+                render_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
                 render_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
                 render_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
                 render_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, finalao);
-                render_mesh.set_indices(Some(Indices::U32(indices)));
-
-                cmd1.spawn(PbrBundle {
-                    mesh: meshes.add(render_mesh.clone()),
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::WHITE,
-                        base_color_texture: Some(
-                            texture_atlas
-                                .get(&loadable_assets.block_atlas)
-                                .unwrap()
-                                .texture
-                                .clone(),
-                        ),
-                        alpha_mode: AlphaMode::Mask(1.0),
-                        perceptual_roughness: 1.0,
-                        ..default()
-                    }),
-                    transform: Transform::from_translation(Vec3::new(
-                        (pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
-                        (pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
-                        (pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
-                    )),
-                    ..Default::default()
+                render_mesh.set_indices(Some(Indices::U32(indices.clone())));
+                let collider = if positions.len() >= 4 {
+                    Collider::from_bevy_mesh(&render_mesh.clone(), &ComputedColliderShape::TriMesh)
+                        .unwrap_or_default()
+                } else {
+                    Collider::cuboid(0.0, 0.0, 0.0)
+                };
+                cmd1.spawn(RenderedChunk {
+                    collider,
+                    chunk: Chunk {
+                        chunk_data,
+                        pos: pos.into(),
+                        dirty: true,
+                        entities: Vec::new(),
+                        saved_entities: Vec::new(),
+                    },
+                    mesh: PbrBundle {
+                        mesh: meshes.add(render_mesh.clone()),
+                        material: materials.add(StandardMaterial {
+                            base_color: Color::WHITE,
+                            base_color_texture: Some(
+                                texture_atlas
+                                    .get(&loadable_assets.block_atlas)
+                                    .unwrap()
+                                    .texture
+                                    .clone(),
+                            ),
+                            alpha_mode: AlphaMode::Mask(1.0),
+                            perceptual_roughness: 1.0,
+                            ..default()
+                        }),
+                        transform: Transform::from_translation(Vec3::new(
+                            (pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
+                            (pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
+                            (pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
+                        )),
+                        ..Default::default()
+                    },
                 });
                 // This is stupid and awful so ill come back to semi transparent objects
                 // cmd2.spawn(PbrBundle {

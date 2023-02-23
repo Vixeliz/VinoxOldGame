@@ -55,7 +55,7 @@ pub fn server_update_system(
                 }
 
                 // Spawn new player
-                let transform = Transform::from_xyz(0.0, 0.0, -10.0);
+                let transform = Transform::from_xyz(0.0, 16.0, -10.0);
                 // let player_entity = commands.spawn((transform, Player { id: *id })).id();
                 let player_entity = commands
                     .spawn(player_builder.build(transform.translation, *id, false))

@@ -169,7 +169,8 @@ pub fn camera_controller(
                 options.velocity = Vec3::ZERO;
             }
         }
-        let forward = transform.forward();
+        let mut forward = transform.forward();
+        forward.y = 0.0;
         let right = transform.right();
         let translation_delta = options.velocity.x * dt * right
             + options.velocity.y * dt * Vec3::Y

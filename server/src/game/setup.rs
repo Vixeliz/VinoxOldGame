@@ -10,15 +10,10 @@ pub fn setup(_commands: Commands, mut chunk_manager: ChunkManager) {
     chunk_manager.add_point(IVec3 { x: 0, y: 0, z: 0 });
 }
 
-use std::{
-    net::UdpSocket,
-    time::{SystemTime},
-};
+use std::{net::UdpSocket, time::SystemTime};
 
-use bevy::{app::AppExit};
-use bevy_renet::{
-    renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig},
-};
+use bevy::app::AppExit;
+use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig};
 
 use super::world::chunk::{ChunkGenerationPlugin, ChunkManager};
 

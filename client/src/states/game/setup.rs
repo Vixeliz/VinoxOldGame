@@ -4,6 +4,7 @@ use super::networking::{
     *,
 };
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use common::networking::components::EntityBuffer;
 use iyes_loopless::prelude::*;
 
@@ -23,7 +24,9 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(NetworkMapping::default())
+        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+            .insert_resource(RapierConfiguration { ..default() })
+            .insert_resource(NetworkMapping::default())
             .insert_resource(ClientLobby::default())
             .insert_resource(EntityBuffer::default())
             .add_enter_system(GameState::Game, setup)

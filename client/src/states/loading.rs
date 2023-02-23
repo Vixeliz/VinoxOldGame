@@ -1,5 +1,4 @@
 use bevy::{asset::LoadState, math::Vec3A, prelude::*, render::primitives::Aabb};
-use bevy_rapier3d::prelude::*;
 use common::{
     game::{
         bundles::{AssetsLoading, PlayerBundleBuilder},
@@ -204,13 +203,7 @@ pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
-            .insert_resource(RapierConfiguration {
-                gravity: Vec3::new(0.0, 0.0, 0.0),
-                ..Default::default()
-            })
-            .add_plugin(RapierDebugRenderPlugin::default())
-            .insert_resource(AssetsLoading::default())
+        app.insert_resource(AssetsLoading::default())
             .insert_resource(LoadableTypes::default())
             .insert_resource(LoadableAssets::default())
             .add_system(switch.run_in_state(GameState::Loading))
