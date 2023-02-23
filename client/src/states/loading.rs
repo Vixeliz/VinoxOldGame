@@ -15,18 +15,10 @@ use crate::{
     systems::despawn_with,
 };
 
-use std::{
-    collections::HashMap,
-    net::UdpSocket,
-    time::{SystemTime},
-};
+use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
 
-use bevy::{
-    app::AppExit,
-};
-use bevy_renet::{
-    renet::{ClientAuthentication, RenetClient, RenetError},
-};
+use bevy::app::AppExit;
+use bevy_renet::renet::{ClientAuthentication, RenetClient, RenetError};
 use iyes_loopless::prelude::*;
 extern crate common;
 
