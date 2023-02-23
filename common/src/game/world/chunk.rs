@@ -18,6 +18,7 @@ pub struct Chunk {
     pub pos: IVec3,
     pub chunk_data: RawChunk,
     pub entities: Vec<Entity>,
+    pub saved_entities: Vec<String>,
     pub dirty: bool,
 }
 
