@@ -53,5 +53,6 @@ fn main() {
         .add_plugin(LoadingPlugin)
         .add_plugin(GamePlugin)
         .add_startup_system(systems::start)
+        .insert_resource(Msaa { samples: 1 })
         .run();
 }
