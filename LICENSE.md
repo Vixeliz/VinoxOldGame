@@ -23,7 +23,8 @@ License of Vinox Artwork (3d models, sounds, textures, etc) is licensed under th
 The license can be found here: https://creativecommons.org/licenses/by-nc-sa/4.0/legalcode
 
 
-
+Other software
+------------------
 
 This software has used https://github.com/Game4all/vx_bevy for some ideas for implementation and some implementations themselve.
 This is licensed under the MIT license see the link
