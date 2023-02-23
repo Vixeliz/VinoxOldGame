@@ -109,7 +109,7 @@ pub fn setup_resources(
     mut loading: ResMut<AssetsLoading>,
     mut loadable_types: ResMut<LoadableTypes>,
 ) {
-    let player_handle = asset_server.load("player.gltf#Scene0");
+    let player_handle = asset_server.load("base_player.gltf#Scene0");
     loading.0.push(player_handle.clone_untyped());
     let player_hands_handle = asset_server.load("hands.gltf#Scene0");
     loading.0.push(player_hands_handle.clone_untyped());
