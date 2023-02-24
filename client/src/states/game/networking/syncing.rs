@@ -24,8 +24,10 @@ use crate::{
     components::Game,
     states::{
         game::{
-            input::CameraController, networking::components::ControlledPlayer,
-            rendering::meshing::build_mesh, world::chunk::RenderedChunk,
+            input::CameraController,
+            networking::components::ControlledPlayer,
+            rendering::meshing::{build_mesh, MeshChunkEvent},
+            world::chunk::RenderedChunk,
         },
         loading::LoadableAssets,
     },
@@ -45,8 +47,7 @@ pub fn client_sync_players(
     player_builder: Res<PlayerBundleBuilder>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut loadable_assets: ResMut<LoadableAssets>,
-    texture_atlas: Res<Assets<TextureAtlas>>,
+    mut chunk_mesh_event: EventWriter<MeshChunkEvent>,
 ) {
     let client_id = client.client_id();
     while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
@@ -119,105 +120,13 @@ pub fn client_sync_players(
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
                 println!("Recieved chunk {pos:?}");
-                // let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
-                // let texture_index = block_atlas.get_texture_index(
-                //     &loadable_assets
-                //         .block_textures
-                //         .get(
-                //             &chunk_data
-                //                 .get_state_for_index(voxel_type.value as usize)
-                //                 .unwrap(),
-                //         )
-                //         .unwrap()[0],
-                // );
-                // calculate_coords(
-                //     &mut face_tex,
-                //     texture_index.unwrap(),
-                //     Vec2::new(16.0, 16.0),
-                //     block_atlas.size,
-                // );
-                // tex_coords.extend_from_slice(&face_tex);
-                let chunk_mesh = build_mesh(&chunk_data);
-                let finalao = ao_convert(chunk_mesh.ao, chunk_mesh.positions.len());
-                let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                render_mesh
-                    .insert_attribute(Mesh::ATTRIBUTE_POSITION, chunk_mesh.positions.clone());
-                render_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, chunk_mesh.normals);
-                // render_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
-                render_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, finalao);
-                render_mesh.set_indices(Some(Indices::U32(chunk_mesh.indices.clone())));
-                let collider = if chunk_mesh.positions.len() >= 4 {
-                    Collider::from_bevy_mesh(&render_mesh.clone(), &ComputedColliderShape::TriMesh)
-                        .unwrap_or_default()
-                } else {
-                    Collider::cuboid(0.0, 0.0, 0.0)
-                };
-                cmd1.spawn(RenderedChunk {
-                    collider,
-                    chunk: Chunk {
-                        chunk_data,
-                        pos: pos.into(),
-                        dirty: true,
-                        entities: Vec::new(),
-                        saved_entities: Vec::new(),
-                    },
-                    mesh: PbrBundle {
-                        mesh: meshes.add(render_mesh.clone()),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::WHITE,
-                            base_color_texture: Some(
-                                texture_atlas
-                                    .get(&loadable_assets.block_atlas)
-                                    .unwrap()
-                                    .texture
-                                    .clone(),
-                            ),
-                            alpha_mode: AlphaMode::Mask(1.0),
-                            perceptual_roughness: 1.0,
-                            ..default()
-                        }),
-                        transform: Transform::from_translation(Vec3::new(
-                            (pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
-                            (pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
-                            (pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
-                        )),
-                        ..Default::default()
-                    },
+                chunk_mesh_event.send(MeshChunkEvent {
+                    raw_chunk: chunk_data,
+                    pos: pos.into(),
                 });
-                // This is stupid and awful so ill come back to semi transparent objects
-                // cmd2.spawn(PbrBundle {
-                //     mesh: meshes.add(render_mesh),
-                //     material: materials.add(StandardMaterial {
-                //         base_color: Color::WHITE,
-                //         // base_color_texture: Some(texture_handle.0.clone()),
-                //         alpha_mode: AlphaMode::Blend,
-                //         perceptual_roughness: 1.0,
-                //         ..default()
-                //     }),
-                //     transform: Transform::from_translation(Vec3::new(
-                //         (pos[0] * (CHUNK_SIZE / 2) as i32) as f32,
-                //         (pos[1] * (CHUNK_SIZE / 2) as i32) as f32,
-                //         (pos[2] * (CHUNK_SIZE / 2) as i32) as f32,
-                //     )),
-                //     ..Default::default()
-                // });
             }
         }
     }
-}
-
-// TODO: move this out just testing rn
-fn ao_convert(ao: Vec<u8>, num_vertices: usize) -> Vec<[f32; 4]> {
-    let mut res = Vec::with_capacity(num_vertices);
-    for value in ao {
-        match value {
-            0 => res.extend_from_slice(&[[0.3, 0.3, 0.3, 1.0]]),
-            1 => res.extend_from_slice(&[[0.5, 0.5, 0.5, 1.0]]),
-            2 => res.extend_from_slice(&[[0.75, 0.75, 0.75, 1.0]]),
-            _ => res.extend_from_slice(&[[1.0, 1.0, 1.0, 1.0]]),
-        }
-    }
-    res
 }
 
 pub fn lerp_new_location(
@@ -261,30 +170,6 @@ pub fn lerp_new_location(
             }
         }
     }
-}
-
-pub fn calculate_coords(
-    face_tex: &mut [[f32; 2]; 4],
-    index: usize,
-    tile_size: Vec2,
-    tilesheet_size: Vec2,
-) {
-    let mut index = index as f32;
-    // We need to start at 1.0 for calculations
-    index += 1.0;
-    let max_y = (tile_size.y) / tilesheet_size.y;
-    face_tex[0][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    // face_tex[0][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    face_tex[0][1] = 0.0;
-    face_tex[1][0] = (index * tile_size.x) / tilesheet_size.x;
-    // face_tex[1][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    face_tex[1][1] = 0.0;
-    face_tex[2][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    // face_tex[2][1] = (index * tile_size.x) / tilesheet_size.x;
-    face_tex[2][1] = max_y;
-    face_tex[3][0] = (index * tile_size.x) / tilesheet_size.x;
-    // face_tex[3][1] = (index * tile_size.x) / tilesheet_size.x;
-    face_tex[3][1] = max_y;
 }
 
 pub fn client_send_naive_position(

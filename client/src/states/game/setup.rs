@@ -3,6 +3,7 @@ use super::networking::{
     components::{ClientLobby, NetworkMapping},
     *,
 };
+use super::rendering::meshing;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use common::networking::components::EntityBuffer;
@@ -38,6 +39,8 @@ impl Plugin for GamePlugin {
                 syncing::client_send_naive_position.run_in_state(GameState::Game),
             )
             .add_system(syncing::lerp_new_location.run_in_state(GameState::Game))
-            .add_system(input::camera_controller.run_in_state(GameState::Game));
+            .add_system(input::camera_controller.run_in_state(GameState::Game))
+            .add_system(meshing::build_mesh.run_in_state(GameState::Game))
+            .add_event::<crate::states::game::rendering::meshing::MeshChunkEvent>();
     }
 }
