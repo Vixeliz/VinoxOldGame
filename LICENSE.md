@@ -28,3 +28,5 @@ Other software
 
 This software has used https://github.com/Game4all/vx_bevy for some ideas for implementation and some implementations themselve.
 This is licensed under the MIT license see the link
+
+This software has also used https://github.com/bonsairobo/block-mesh-rs licensed under MIT for implementation of ao

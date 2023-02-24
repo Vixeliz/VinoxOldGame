@@ -20,5 +20,7 @@ BlockDescriptor(
     walk_sound: Some("grass_walk.wav"),
     break_sound: Some("grass_break.wav"),
     block_script: Some("grass.lua"),
-    opaque: true 
+    visibility: "opaque",
+    block_geometry: "block"
+ 
 )

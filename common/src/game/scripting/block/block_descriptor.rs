@@ -15,5 +15,6 @@ pub struct BlockDescriptor {
     pub walk_sound: Option<String>,
     pub break_sound: Option<String>,
     pub block_script: Option<String>,
-    pub opaque: bool,
+    pub visibility: String,
+    pub block_geometry: String,
 }

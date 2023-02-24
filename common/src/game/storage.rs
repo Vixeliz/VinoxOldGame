@@ -4,6 +4,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
+use super::world::chunk::{GeometryType, VoxelVisibility};
+
 #[derive(Debug, PartialEq, EnumString, Default)]
 pub enum AiType {
     #[strum(ascii_case_insensitive)]
@@ -39,7 +41,8 @@ pub struct BlockType {
     pub walk_sound: Option<String>,
     pub break_sound: Option<String>,
     pub block_script: Option<String>,
-    pub opaque: bool,
+    pub visibility: VoxelVisibility,
+    pub block_geometry: GeometryType,
 }
 
 #[derive(Debug)]
@@ -71,7 +74,10 @@ pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, 
                 walk_sound: raw_block.walk_sound,
                 break_sound: raw_block.break_sound,
                 block_script: raw_block.block_script,
-                opaque: raw_block.opaque,
+                visibility: VoxelVisibility::from_str(raw_block.visibility.as_str())
+                    .unwrap_or_default(),
+                block_geometry: GeometryType::from_str(raw_block.block_geometry.as_str())
+                    .unwrap_or_default(),
             },
         );
     }

@@ -1,7 +1,11 @@
 use crate::networking::{components::ServerLobby, *};
 use bevy::prelude::*;
 use common::{
-    game::bundles::PlayerBundleBuilder,
+    game::{
+        bundles::PlayerBundleBuilder,
+        scripting::{block::load::load_all_blocks, entity::load::load_all_entities},
+        storage::{convert_block, convert_entity, BlockType, EntityType},
+    },
     networking::components::{server_connection_config, NetworkIP, PROTOCOL_ID},
 };
 use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
@@ -10,7 +14,7 @@ pub fn setup(_commands: Commands, mut chunk_manager: ChunkManager) {
     chunk_manager.add_point(IVec3 { x: 0, y: 0, z: 0 });
 }
 
-use std::{net::UdpSocket, time::SystemTime};
+use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
 
 use bevy::app::AppExit;
 use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig};
@@ -18,6 +22,17 @@ use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerCon
 use super::world::chunk::{ChunkGenerationPlugin, ChunkManager};
 
 extern crate common;
+
+#[derive(Resource, Default)]
+pub struct LoadableTypes {
+    pub entities: HashMap<String, EntityType>,
+    pub blocks: HashMap<String, BlockType>,
+}
+
+pub fn setup_loadables(mut loadable_types: ResMut<LoadableTypes>) {
+    loadable_types.blocks = convert_block(load_all_blocks());
+    loadable_types.entities = convert_entity(load_all_entities());
+}
 
 pub fn new_renet_server(mut commands: Commands, ip_res: Res<NetworkIP>) {
     let port: String = ":25565".to_owned();
@@ -58,6 +73,8 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ChunkGenerationPlugin)
+            .insert_resource(LoadableTypes::default())
+            .add_startup_system(setup_loadables)
             .add_startup_system(new_renet_server)
             .add_startup_system(setup_builders)
             .add_system(panic_on_error_system)

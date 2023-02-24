@@ -17,5 +17,6 @@ BlockDescriptor(
     walk_sound: Some("dirt_walk.wav"),
     break_sound: Some("dirt_break.wav"),
     block_script: Some("dirt.lua"),
-    opaque: true
+    visibility: "opaque",
+    block_geometry: "block"
 )

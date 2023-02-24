@@ -8,12 +8,10 @@ use bevy_easings::{Ease, EaseMethod, EasingType};
 
 use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
 use bevy_renet::renet::RenetClient;
-use block_mesh::ndshape::ConstShape;
-use block_mesh::{visible_block_faces, UnitQuadBuffer, RIGHT_HANDED_Y_UP_CONFIG};
 use common::{
     game::{
         bundles::PlayerBundleBuilder,
-        world::chunk::{Chunk, ChunkShape, CHUNK_SIZE},
+        world::chunk::{Chunk, CHUNK_SIZE},
     },
     networking::components::{
         ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
@@ -27,7 +25,7 @@ use crate::{
     states::{
         game::{
             input::CameraController, networking::components::ControlledPlayer,
-            world::chunk::RenderedChunk,
+            rendering::meshing::build_mesh, world::chunk::RenderedChunk,
         },
         loading::LoadableAssets,
     },
@@ -121,68 +119,34 @@ pub fn client_sync_players(
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
                 println!("Recieved chunk {pos:?}");
-                let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
-                // Simple meshing works on web and makes texture atlases easier. However I may look into greedy meshing in future
-                let mut buffer = UnitQuadBuffer::new();
-                visible_block_faces(
-                    &chunk_data.voxels,
-                    &ChunkShape {},
-                    [0; 3],
-                    [CHUNK_SIZE as u32; 3],
-                    &faces,
-                    &mut buffer,
-                );
-                let num_indices = buffer.num_quads() * 6;
-                let num_vertices = buffer.num_quads() * 4;
-                let mut indices = Vec::with_capacity(num_indices);
-                let mut positions = Vec::with_capacity(num_vertices);
-                let mut normals = Vec::with_capacity(num_vertices);
-                let mut tex_coords = Vec::with_capacity(num_vertices);
-                let mut ao = Vec::with_capacity(num_vertices);
-                for (group, face) in buffer.groups.into_iter().zip(faces.into_iter()) {
-                    for quad in group.into_iter() {
-                        indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
-                        positions.extend_from_slice(&face.quad_mesh_positions(&quad.into(), 1.0));
-                        normals.extend_from_slice(&face.quad_mesh_normals());
-                        ao.extend_from_slice(&face.quad_mesh_ao(&quad.into()));
-                        let mut face_tex = face.tex_coords(
-                            RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
-                            true,
-                            &quad.into(),
-                        );
-                        let [x, y, z] = quad.minimum;
-                        let i = ChunkShape::linearize([x, y, z]);
-                        let voxel_type = chunk_data.voxels[i as usize];
-                        let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
-                        let texture_index = block_atlas.get_texture_index(
-                            &loadable_assets
-                                .block_textures
-                                .get(
-                                    &chunk_data
-                                        .get_state_for_index(voxel_type.value as usize)
-                                        .unwrap(),
-                                )
-                                .unwrap()[0],
-                        );
-                        calculate_coords(
-                            &mut face_tex,
-                            texture_index.unwrap(),
-                            Vec2::new(16.0, 16.0),
-                            block_atlas.size,
-                        );
-                        tex_coords.extend_from_slice(&face_tex);
-                    }
-                }
-
-                let finalao = ao_convert(ao, num_vertices);
+                // let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
+                // let texture_index = block_atlas.get_texture_index(
+                //     &loadable_assets
+                //         .block_textures
+                //         .get(
+                //             &chunk_data
+                //                 .get_state_for_index(voxel_type.value as usize)
+                //                 .unwrap(),
+                //         )
+                //         .unwrap()[0],
+                // );
+                // calculate_coords(
+                //     &mut face_tex,
+                //     texture_index.unwrap(),
+                //     Vec2::new(16.0, 16.0),
+                //     block_atlas.size,
+                // );
+                // tex_coords.extend_from_slice(&face_tex);
+                let chunk_mesh = build_mesh(&chunk_data);
+                let finalao = ao_convert(chunk_mesh.ao, chunk_mesh.positions.len());
                 let mut render_mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
-                render_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
-                render_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-                render_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
+                render_mesh
+                    .insert_attribute(Mesh::ATTRIBUTE_POSITION, chunk_mesh.positions.clone());
+                render_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, chunk_mesh.normals);
+                // render_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
                 render_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, finalao);
-                render_mesh.set_indices(Some(Indices::U32(indices.clone())));
-                let collider = if positions.len() >= 4 {
+                render_mesh.set_indices(Some(Indices::U32(chunk_mesh.indices.clone())));
+                let collider = if chunk_mesh.positions.len() >= 4 {
                     Collider::from_bevy_mesh(&render_mesh.clone(), &ComputedColliderShape::TriMesh)
                         .unwrap_or_default()
                 } else {
