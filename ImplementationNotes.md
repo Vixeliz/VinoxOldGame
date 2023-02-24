@@ -2,6 +2,9 @@
 Server is responsible for creating the actual chunk data. Therefore we will handle that in the server crate.
 However we still obviously need to send it to the client so the client can mesh it.
 
+Another thing is when chunks are updated on the server from players breaking or placing blocks we will only send changed blocks to clients
+Basically acting as if we were adding or removing that block on the client. This will include and palette changes. Perhaps palette should just always be sent
+
 // Scripting
 The scripting api at first will be very barebones. I plan to only support the most simple task such as modifying
 the world blocks and doing simple things relating to entities such as health. I don't see this being an issue
