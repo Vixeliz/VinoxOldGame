@@ -3,7 +3,9 @@ use bevy::{
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
-use common::game::world::chunk::{Chunk, ChunkComp, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE};
+use common::game::world::chunk::{
+    Chunk, ChunkComp, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
+};
 
 use crate::states::{game::world::chunk::RenderedChunk, loading::LoadableAssets};
 
