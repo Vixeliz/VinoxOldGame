@@ -39,14 +39,17 @@ fn main() {
         .add_plugin(EasingsPlugin)
         .add_plugin(WorldInspectorPlugin)
         .add_plugin(RenetClientPlugin::default())
-        .add_fixed_timestep(
+        .add_fixed_timestep_after_stage(
+            CoreStage::Update,
             Duration::from_millis(16),
             // give it a label
             "fixed_update",
         )
-        .add_fixed_timestep(Duration::from_millis(16), "network_update") // We may play with this value higher it is less delay and easier some things are to implement. Downside is bandwidth so look for ways to compress packets sizes. 60hz as a max goal 30hz as least
-        .add_fixed_timestep_child_stage("network_update")
-        .add_fixed_timestep_child_stage("fixed_update") // Send packets at simulation speed
+        .add_fixed_timestep_after_stage(
+            CoreStage::Update,
+            Duration::from_millis(16),
+            "network_update",
+        ) // We may play with this value higher it is less delay and easier some things are to implement. Downside is bandwidth so look for ways to compress packets sizes. 60hz as a max goal 30hz as least
         .add_loopless_state(GameState::Splashscreen)
         .add_plugin(SplashscreenPlugin)
         .add_plugin(MenuPlugin)
