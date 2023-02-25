@@ -384,19 +384,6 @@ where
     buffer
 }
 
-// pub fn generate_meshes(quads: QuadGroups) -> ChunkMesh {
-//     let mesh = ChunkMesh {
-//         positions: Vec::new(),
-//         normals: Vec::new(),
-//         indices: Vec::new(),
-//         ao: Vec::new(),
-//         uvs: Vec::new(),
-//     };
-//     for face in quads.iter() {}
-
-//     mesh
-// }
-
 pub fn build_mesh(
     mut commands: Commands,
     mut event: EventReader<MeshChunkEvent>,
