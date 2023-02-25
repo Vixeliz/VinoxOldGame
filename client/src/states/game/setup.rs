@@ -4,6 +4,7 @@ use super::networking::{
     *,
 };
 use super::rendering::meshing;
+use super::world::chunk::ChunkHandling;
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use common::networking::components::EntityBuffer;
@@ -26,6 +27,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+            .add_plugin(ChunkHandling)
             .insert_resource(RapierConfiguration { ..default() })
             .insert_resource(NetworkMapping::default())
             .insert_resource(ClientLobby::default())

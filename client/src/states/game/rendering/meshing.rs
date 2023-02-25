@@ -7,7 +7,10 @@ use common::game::world::chunk::{
     Chunk, ChunkComp, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
 };
 
-use crate::states::{game::world::chunk::RenderedChunk, loading::LoadableAssets};
+use crate::states::{
+    game::world::chunk::{CurrentChunks, RenderedChunk},
+    loading::LoadableAssets,
+};
 
 pub const EMPTY: VoxelVisibility = VoxelVisibility::Empty;
 pub const OPAQUE: VoxelVisibility = VoxelVisibility::Opaque;
@@ -422,6 +425,7 @@ pub fn build_mesh(
     texture_atlas: Res<Assets<TextureAtlas>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut current_chunks: ResMut<CurrentChunks>,
 ) {
     let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     // 0 and CHUNK_SIZE_PADDED dont get built into the mesh itself its data for meshing from other chunks this is just one solution
@@ -489,38 +493,41 @@ pub fn build_mesh(
         // } else {
         let collider = Collider::cuboid(0.0, 0.0, 0.0);
         // };
-        commands.spawn(RenderedChunk {
-            collider,
-            chunk: ChunkComp {
-                chunk_data: evt.raw_chunk.clone(),
-                pos: evt.pos.into(),
-                dirty: true,
-                entities: Vec::new(),
-                saved_entities: Vec::new(),
-            },
-            mesh: PbrBundle {
-                mesh: meshes.add(mesh.clone()),
-                material: materials.add(StandardMaterial {
-                    base_color: Color::WHITE,
-                    base_color_texture: Some(
-                        texture_atlas
-                            .get(&loadable_assets.block_atlas)
-                            .unwrap()
-                            .texture
-                            .clone(),
-                    ),
-                    alpha_mode: AlphaMode::Mask(1.0),
-                    perceptual_roughness: 1.0,
-                    ..default()
-                }),
-                transform: Transform::from_translation(Vec3::new(
-                    (evt.pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
-                    (evt.pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
-                    (evt.pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
-                )),
-                ..Default::default()
-            },
-        });
+        let chunk_id = commands
+            .spawn(RenderedChunk {
+                collider,
+                chunk: ChunkComp {
+                    chunk_data: evt.raw_chunk.clone(),
+                    pos: evt.pos.into(),
+                    dirty: true,
+                    entities: Vec::new(),
+                    saved_entities: Vec::new(),
+                },
+                mesh: PbrBundle {
+                    mesh: meshes.add(mesh.clone()),
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::WHITE,
+                        base_color_texture: Some(
+                            texture_atlas
+                                .get(&loadable_assets.block_atlas)
+                                .unwrap()
+                                .texture
+                                .clone(),
+                        ),
+                        alpha_mode: AlphaMode::Mask(1.0),
+                        perceptual_roughness: 1.0,
+                        ..default()
+                    }),
+                    transform: Transform::from_translation(Vec3::new(
+                        (evt.pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (evt.pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (evt.pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
+                    )),
+                    ..Default::default()
+                },
+            })
+            .id();
+        current_chunks.insert_entity(evt.pos, chunk_id);
     }
 }
 

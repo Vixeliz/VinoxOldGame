@@ -27,7 +27,7 @@ use super::components::ServerLobby;
 
 #[derive(Component)]
 pub struct SentChunks {
-    chunks: HashSet<IVec3>,
+    pub chunks: HashSet<IVec3>,
 }
 
 // So i dont forget this is actually fine this is just receiving we are just sending out response packets which dont need to be limited since they only happen once per receive

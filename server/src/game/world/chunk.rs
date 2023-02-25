@@ -1,3 +1,5 @@
+use crate::networking::syncing::SentChunks;
+
 use super::generation::generate_chunk;
 use bevy::{
     ecs::system::SystemParam,
@@ -5,7 +7,10 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bimap::BiMap;
-use common::game::world::chunk::{ChunkComp, CHUNK_SIZE};
+use common::{
+    game::world::chunk::{ChunkComp, CHUNK_SIZE},
+    networking::components::Player,
+};
 use futures_lite::future;
 use std::collections::*;
 
@@ -71,6 +76,22 @@ pub struct SimulationDistance {
 pub struct ChunkQueue {
     pub create: Vec<IVec3>,
     pub remove: Vec<IVec3>,
+}
+
+impl CurrentLoadPoints {
+    fn is_in_radius(&self, pos: IVec3, min_bound: IVec3, max_bound: IVec3) -> Option<bool> {
+        for point in self.points.left_values() {
+            if (pos.x <= (max_bound.x + point.x) && pos.x >= (min_bound.x + point.x))
+                && (pos.y <= (max_bound.y + point.y) && pos.y >= (min_bound.y + point.y))
+                && (pos.z <= (max_bound.z + point.z) && pos.z >= (min_bound.z + point.z))
+            {
+                return Some(true);
+            } else {
+                return Some(false);
+            }
+        }
+        None
+    }
 }
 
 #[derive(SystemParam)]
@@ -141,6 +162,45 @@ pub fn generate_chunks_world(
     }
 }
 
+pub fn clear_unloaded_chunks(
+    mut commands: Commands,
+    mut current_chunks: ResMut<CurrentChunks>,
+    current_load_points: Res<CurrentLoadPoints>,
+    view_distance: Res<ViewDistance>,
+    mut player_query: Query<&mut SentChunks, With<Player>>,
+) {
+    let mut changed_chunks = Vec::new();
+    for chunk_pos in current_chunks.chunks.keys() {
+        if let Some(loaded) = current_load_points.is_in_radius(
+            *chunk_pos,
+            IVec3::new(
+                -view_distance.width / 2,
+                -view_distance.height / 2,
+                -view_distance.depth / 2,
+            ),
+            IVec3::new(
+                view_distance.width / 2,
+                view_distance.height / 2,
+                view_distance.depth / 2,
+            ),
+        ) {
+            if !loaded {
+                commands
+                    .get_entity(current_chunks.get_entity(*chunk_pos).unwrap())
+                    .unwrap()
+                    .despawn_recursive();
+                changed_chunks.push(chunk_pos.clone());
+            }
+        }
+    }
+    for chunk_pos in changed_chunks {
+        current_chunks.remove_entity(chunk_pos);
+        for mut sent_chunks in player_query.iter_mut() {
+            sent_chunks.chunks.remove(&chunk_pos);
+        }
+    }
+}
+
 #[derive(Component)]
 pub struct ChunkGenTask(Task<ChunkComp>);
 
@@ -193,9 +253,9 @@ impl Plugin for ChunkGenerationPlugin {
             .insert_resource(ChunkQueue::default())
             .insert_resource(CurrentLoadPoints::default())
             .insert_resource(ViewDistance {
-                width: 6,
+                width: 8,
                 height: 6,
-                depth: 6,
+                depth: 8,
             })
             .insert_resource(SimulationDistance {
                 width: 4,
@@ -204,6 +264,7 @@ impl Plugin for ChunkGenerationPlugin {
             })
             .add_system(process_queue)
             .add_system(generate_chunks_world)
+            .add_system_to_stage(CoreStage::PostUpdate, clear_unloaded_chunks)
             .add_system(process_task);
     }
 }
