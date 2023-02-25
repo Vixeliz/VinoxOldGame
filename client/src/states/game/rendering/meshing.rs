@@ -4,7 +4,7 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
 use common::game::world::chunk::{
-    Chunk, ChunkComp, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
+    Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
 };
 
 use crate::states::{
@@ -212,7 +212,14 @@ pub struct MeshChunkEvent {
 //     pub ao: Vec<u8>,
 // }
 
-pub fn calculate_ao<C, T>(chunk: &C, current_side: Side, x: u32, y: u32, z: u32) -> [u8; 4]
+pub fn calculate_ao<C, T>(
+    chunk: &C,
+    current_side: Side,
+    x: u32,
+    y: u32,
+    z: u32,
+    loadable_types: &LoadableTypes,
+) -> [u8; 4]
 where
     C: Chunk<Output = T>,
     T: Voxel,
@@ -220,69 +227,69 @@ where
     let neighbours: [T; 8];
     if current_side == Side::new(Axis::X, false) {
         neighbours = [
-            chunk.get(x - 1, y, z - 1),
-            chunk.get(x - 1, y - 1, z - 1),
-            chunk.get(x - 1, y - 1, z),
-            chunk.get(x - 1, y - 1, z + 1),
-            chunk.get(x - 1, y, z + 1),
-            chunk.get(x - 1, y + 1, z + 1),
-            chunk.get(x - 1, y + 1, z),
-            chunk.get(x - 1, y + 1, z - 1),
+            chunk.get(x - 1, y, z - 1, loadable_types),
+            chunk.get(x - 1, y - 1, z - 1, loadable_types),
+            chunk.get(x - 1, y - 1, z, loadable_types),
+            chunk.get(x - 1, y - 1, z + 1, loadable_types),
+            chunk.get(x - 1, y, z + 1, loadable_types),
+            chunk.get(x - 1, y + 1, z + 1, loadable_types),
+            chunk.get(x - 1, y + 1, z, loadable_types),
+            chunk.get(x - 1, y + 1, z - 1, loadable_types),
         ];
     } else if current_side == Side::new(Axis::X, true) {
         neighbours = [
-            chunk.get(x + 1, y, z + 1),
-            chunk.get(x + 1, y - 1, z + 1),
-            chunk.get(x + 1, y - 1, z),
-            chunk.get(x + 1, y - 1, z - 1),
-            chunk.get(x + 1, y, z - 1),
-            chunk.get(x + 1, y + 1, z - 1),
-            chunk.get(x + 1, y + 1, z),
-            chunk.get(x + 1, y + 1, z + 1),
+            chunk.get(x + 1, y, z + 1, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
+            chunk.get(x + 1, y - 1, z, loadable_types),
+            chunk.get(x + 1, y - 1, z - 1, loadable_types),
+            chunk.get(x + 1, y, z - 1, loadable_types),
+            chunk.get(x + 1, y + 1, z - 1, loadable_types),
+            chunk.get(x + 1, y + 1, z, loadable_types),
+            chunk.get(x + 1, y + 1, z + 1, loadable_types),
         ];
     } else if current_side == Side::new(Axis::Y, false) {
         neighbours = [
-            chunk.get(x, y - 1, z + 1),
-            chunk.get(x - 1, y - 1, z + 1),
-            chunk.get(x - 1, y - 1, z),
-            chunk.get(x - 1, y - 1, z - 1),
-            chunk.get(x, y - 1, z - 1),
-            chunk.get(x + 1, y - 1, z - 1),
-            chunk.get(x + 1, y - 1, z),
-            chunk.get(x + 1, y - 1, z + 1),
+            chunk.get(x, y - 1, z + 1, loadable_types),
+            chunk.get(x - 1, y - 1, z + 1, loadable_types),
+            chunk.get(x - 1, y - 1, z, loadable_types),
+            chunk.get(x - 1, y - 1, z - 1, loadable_types),
+            chunk.get(x, y - 1, z - 1, loadable_types),
+            chunk.get(x + 1, y - 1, z - 1, loadable_types),
+            chunk.get(x + 1, y - 1, z, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
         ];
     } else if current_side == Side::new(Axis::Y, true) {
         neighbours = [
-            chunk.get(x, y + 1, z - 1),
-            chunk.get(x - 1, y + 1, z - 1),
-            chunk.get(x - 1, y + 1, z),
-            chunk.get(x - 1, y + 1, z + 1),
-            chunk.get(x, y + 1, z + 1),
-            chunk.get(x + 1, y + 1, z + 1),
-            chunk.get(x + 1, y + 1, z),
-            chunk.get(x + 1, y + 1, z - 1),
+            chunk.get(x, y + 1, z - 1, loadable_types),
+            chunk.get(x - 1, y + 1, z - 1, loadable_types),
+            chunk.get(x - 1, y + 1, z, loadable_types),
+            chunk.get(x - 1, y + 1, z + 1, loadable_types),
+            chunk.get(x, y + 1, z + 1, loadable_types),
+            chunk.get(x + 1, y + 1, z + 1, loadable_types),
+            chunk.get(x + 1, y + 1, z, loadable_types),
+            chunk.get(x + 1, y + 1, z - 1, loadable_types),
         ];
     } else if current_side == Side::new(Axis::Z, true) {
         neighbours = [
-            chunk.get(x - 1, y, z + 1),
-            chunk.get(x - 1, y - 1, z + 1),
-            chunk.get(x, y - 1, z + 1),
-            chunk.get(x + 1, y - 1, z + 1),
-            chunk.get(x + 1, y, z + 1),
-            chunk.get(x + 1, y + 1, z + 1),
-            chunk.get(x, y + 1, z + 1),
-            chunk.get(x - 1, y + 1, z + 1),
+            chunk.get(x - 1, y, z + 1, loadable_types),
+            chunk.get(x - 1, y - 1, z + 1, loadable_types),
+            chunk.get(x, y - 1, z + 1, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
+            chunk.get(x + 1, y, z + 1, loadable_types),
+            chunk.get(x + 1, y + 1, z + 1, loadable_types),
+            chunk.get(x, y + 1, z + 1, loadable_types),
+            chunk.get(x - 1, y + 1, z + 1, loadable_types),
         ];
     } else {
         neighbours = [
-            chunk.get(x + 1, y, z - 1),
-            chunk.get(x + 1, y - 1, z - 1),
-            chunk.get(x, y - 1, z - 1),
-            chunk.get(x - 1, y - 1, z - 1),
-            chunk.get(x - 1, y, z - 1),
-            chunk.get(x - 1, y + 1, z - 1),
-            chunk.get(x, y + 1, z - 1),
-            chunk.get(x + 1, y + 1, z - 1),
+            chunk.get(x + 1, y, z - 1, loadable_types),
+            chunk.get(x + 1, y - 1, z - 1, loadable_types),
+            chunk.get(x, y - 1, z - 1, loadable_types),
+            chunk.get(x - 1, y - 1, z - 1, loadable_types),
+            chunk.get(x - 1, y, z - 1, loadable_types),
+            chunk.get(x - 1, y + 1, z - 1, loadable_types),
+            chunk.get(x, y + 1, z - 1, loadable_types),
+            chunk.get(x + 1, y + 1, z - 1, loadable_types),
         ];
     }
 
@@ -359,7 +366,7 @@ where
     ao
 }
 
-pub fn generate_mesh<C, T>(chunk: &C) -> QuadGroups
+pub fn generate_mesh<C, T>(chunk: &C, loadable_types: &LoadableTypes) -> QuadGroups
 where
     C: Chunk<Output = T>,
     T: Voxel,
@@ -377,18 +384,18 @@ where
             && (y > 0 && y < (C::Y - 1) as u32)
             && (z > 0 && z < (C::Z - 1) as u32)
         {
-            let voxel = chunk.get(x, y, z);
+            let voxel = chunk.get(x, y, z, loadable_types);
 
             match voxel.visibility() {
                 EMPTY => continue,
                 visibility => {
                     let neighbors = [
-                        chunk.get(x - 1, y, z),
-                        chunk.get(x + 1, y, z),
-                        chunk.get(x, y - 1, z),
-                        chunk.get(x, y + 1, z),
-                        chunk.get(x, y, z - 1),
-                        chunk.get(x, y, z + 1),
+                        chunk.get(x - 1, y, z, loadable_types),
+                        chunk.get(x + 1, y, z, loadable_types),
+                        chunk.get(x, y - 1, z, loadable_types),
+                        chunk.get(x, y + 1, z, loadable_types),
+                        chunk.get(x, y, z - 1, loadable_types),
+                        chunk.get(x, y, z + 1, loadable_types),
                     ];
 
                     for (i, neighbor) in neighbors.into_iter().enumerate() {
@@ -422,6 +429,7 @@ pub fn build_mesh(
     mut commands: Commands,
     mut event: EventReader<MeshChunkEvent>,
     mut loadable_assets: ResMut<LoadableAssets>,
+    loadable_types: Res<LoadableTypes>,
     texture_atlas: Res<Assets<TextureAtlas>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
@@ -431,7 +439,7 @@ pub fn build_mesh(
     // 0 and CHUNK_SIZE_PADDED dont get built into the mesh itself its data for meshing from other chunks this is just one solution
     // TODO: Redo a lot of this code but for now just want a working implementation. The ao and custom geometry are the things I think need the most looking at
     for evt in event.iter() {
-        let mesh_result = generate_mesh(&evt.raw_chunk);
+        let mesh_result = generate_mesh(&evt.raw_chunk, loadable_types.as_ref());
         let mut positions = Vec::new();
         let mut indices = Vec::new();
         let mut normals = Vec::new();
@@ -447,6 +455,7 @@ pub fn build_mesh(
                 face.quad.voxel[0] as u32,
                 face.quad.voxel[1] as u32,
                 face.quad.voxel[2] as u32,
+                loadable_types.as_ref(),
             ));
 
             // uvs.extend_from_slice(&face.uvs(false, true));
@@ -460,8 +469,7 @@ pub fn build_mesh(
                                     face.quad.voxel[0] as u32,
                                     face.quad.voxel[1] as u32,
                                     face.quad.voxel[2] as u32,
-                                ))]
-                                .value() as usize,
+                                ))] as usize,
                             )
                             .unwrap(),
                     )

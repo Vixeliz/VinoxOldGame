@@ -4,6 +4,7 @@ use common::{
         bundles::{AssetsLoading, PlayerBundleBuilder},
         scripting::{block::load::load_all_blocks, entity::load::load_all_entities},
         storage::{convert_block, convert_entity, BlockType, EntityType},
+        world::chunk::LoadableTypes,
     },
     networking::components::{client_connection_config, NetworkIP, PROTOCOL_ID},
 };
@@ -122,12 +123,6 @@ pub fn setup_resources(
     });
     loadable_types.blocks = convert_block(load_all_blocks());
     loadable_types.entities = convert_entity(load_all_entities());
-}
-
-#[derive(Resource, Default)]
-pub struct LoadableTypes {
-    pub entities: HashMap<String, EntityType>,
-    pub blocks: HashMap<String, BlockType>,
 }
 
 #[derive(Resource, Default)]
