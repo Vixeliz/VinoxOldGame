@@ -125,7 +125,7 @@ pub fn setup_resources(
     loadable_types.entities = convert_entity(load_all_entities());
 }
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone)]
 pub struct LoadableAssets {
     pub block_models: HashMap<String, Handle<Scene>>,
     pub block_textures: HashMap<String, [Handle<Image>; 6]>,

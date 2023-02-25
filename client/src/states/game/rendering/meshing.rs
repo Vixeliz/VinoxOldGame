@@ -1,14 +1,16 @@
 use bevy::{
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
+    tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
 use common::game::world::chunk::{
     Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
 };
+use futures_lite::future;
 
 use crate::states::{
-    game::world::chunk::{CurrentChunks, RenderedChunk},
+    game::world::chunk::{ChunkQueue, CurrentChunks, RenderedChunk},
     loading::LoadableAssets,
 };
 
@@ -28,14 +30,14 @@ pub struct QuadGroups {
     pub groups: [Vec<Quad>; 6],
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub enum Axis {
     X,
     Y,
     Z,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Clone, Copy)]
 pub struct Side {
     pub axis: Axis,
     pub positive: bool,
@@ -434,85 +436,149 @@ pub fn build_mesh(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut current_chunks: ResMut<CurrentChunks>,
+    mut chunk_queue: ResMut<ChunkQueue>,
 ) {
-    let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
+    // let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     // 0 and CHUNK_SIZE_PADDED dont get built into the mesh itself its data for meshing from other chunks this is just one solution
     // TODO: Redo a lot of this code but for now just want a working implementation. The ao and custom geometry are the things I think need the most looking at
     for evt in event.iter() {
-        let mesh_result = generate_mesh(&evt.raw_chunk, loadable_types.as_ref());
-        let mut positions = Vec::new();
-        let mut indices = Vec::new();
-        let mut normals = Vec::new();
-        let mut uvs = Vec::new();
-        let mut ao = Vec::new();
-        for face in mesh_result.iter() {
-            positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
-            indices.extend_from_slice(&face.indices(positions.len() as u32));
-            normals.extend_from_slice(&face.normals());
-            ao.extend_from_slice(&calculate_ao(
-                &evt.raw_chunk,
-                face.side,
-                face.quad.voxel[0] as u32,
-                face.quad.voxel[1] as u32,
-                face.quad.voxel[2] as u32,
-                loadable_types.as_ref(),
-            ));
+        chunk_queue
+            .mesh
+            .push((evt.pos.into(), evt.raw_chunk.clone()));
+        //     let mesh_result = generate_mesh(&evt.raw_chunk, loadable_types.as_ref());
+        //     let mut positions = Vec::new();
+        //     let mut indices = Vec::new();
+        //     let mut normals = Vec::new();
+        //     let mut uvs = Vec::new();
+        //     let mut ao = Vec::new();
+        //     for face in mesh_result.iter() {
+        //         positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
+        //         indices.extend_from_slice(&face.indices(positions.len() as u32));
+        //         normals.extend_from_slice(&face.normals());
+        //         ao.extend_from_slice(&calculate_ao(
+        //             &evt.raw_chunk,
+        //             face.side,
+        //             face.quad.voxel[0] as u32,
+        //             face.quad.voxel[1] as u32,
+        //             face.quad.voxel[2] as u32,
+        //             loadable_types.as_ref(),
+        //         ));
 
-            // uvs.extend_from_slice(&face.uvs(false, true));
-            let texture_index = block_atlas.get_texture_index(
-                &loadable_assets
-                    .block_textures
-                    .get(
-                        &evt.raw_chunk
-                            .get_state_for_index(
-                                evt.raw_chunk.voxels[RawChunk::linearize(UVec3::new(
-                                    face.quad.voxel[0] as u32,
-                                    face.quad.voxel[1] as u32,
-                                    face.quad.voxel[2] as u32,
-                                ))] as usize,
-                            )
-                            .unwrap(),
-                    )
-                    .unwrap()[0],
-            );
-            let face_coords = calculate_coords(
-                texture_index.unwrap(),
-                Vec2::new(16.0, 16.0),
-                block_atlas.size,
-            );
-            uvs.push(face_coords[0]);
-            uvs.push(face_coords[1]);
-            uvs.push(face_coords[2]);
-            uvs.push(face_coords[3]);
-        }
+        //         // uvs.extend_from_slice(&face.uvs(false, true));
+        //         let texture_index = block_atlas.get_texture_index(
+        //             &loadable_assets
+        //                 .block_textures
+        //                 .get(
+        //                     &evt.raw_chunk
+        //                         .get_state_for_index(
+        //                             evt.raw_chunk.voxels[RawChunk::linearize(UVec3::new(
+        //                                 face.quad.voxel[0] as u32,
+        //                                 face.quad.voxel[1] as u32,
+        //                                 face.quad.voxel[2] as u32,
+        //                             ))] as usize,
+        //                         )
+        //                         .unwrap(),
+        //                 )
+        //                 .unwrap()[0],
+        //         );
+        //         let face_coords = calculate_coords(
+        //             texture_index.unwrap(),
+        //             Vec2::new(16.0, 16.0),
+        //             block_atlas.size,
+        //         );
+        //         uvs.push(face_coords[0]);
+        //         uvs.push(face_coords[1]);
+        //         uvs.push(face_coords[2]);
+        //         uvs.push(face_coords[3]);
+        //     }
 
-        let final_ao = ao_convert(ao);
-        let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+        //     let final_ao = ao_convert(ao);
+        //     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
-        mesh.set_indices(Some(Indices::U32(indices)));
+        //     mesh.set_indices(Some(Indices::U32(indices)));
 
-        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
-        mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-        mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, final_ao);
-        // let collider = if positions.len() >= 4 {
-        //     Collider::from_bevy_mesh(&mesh.clone(), &ComputedColliderShape::TriMesh)
-        //         .unwrap_or_default()
-        // } else {
-        let collider = Collider::cuboid(0.0, 0.0, 0.0);
-        // };
-        let chunk_id = commands
-            .spawn(RenderedChunk {
+        //     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
+        //     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        //     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        //     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, final_ao);
+        //     // let collider = if positions.len() >= 4 {
+        //     //     Collider::from_bevy_mesh(&mesh.clone(), &ComputedColliderShape::TriMesh)
+        //     //         .unwrap_or_default()
+        //     // } else {
+        //     let collider = Collider::cuboid(0.0, 0.0, 0.0);
+        //     // };
+        //     let chunk_id = commands
+        //         .spawn(RenderedChunk {
+        //             collider,
+        //             chunk: ChunkComp {
+        //                 chunk_data: evt.raw_chunk.clone(),
+        //                 pos: evt.pos.into(),
+        //                 dirty: true,
+        //                 entities: Vec::new(),
+        //                 saved_entities: Vec::new(),
+        //             },
+        //             mesh: PbrBundle {
+        //                 mesh: meshes.add(mesh.clone()),
+        //                 material: materials.add(StandardMaterial {
+        //                     base_color: Color::WHITE,
+        //                     base_color_texture: Some(
+        //                         texture_atlas
+        //                             .get(&loadable_assets.block_atlas)
+        //                             .unwrap()
+        //                             .texture
+        //                             .clone(),
+        //                     ),
+        //                     alpha_mode: AlphaMode::Mask(1.0),
+        //                     perceptual_roughness: 1.0,
+        //                     ..default()
+        //                 }),
+        //                 transform: Transform::from_translation(Vec3::new(
+        //                     (evt.pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
+        //                     (evt.pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
+        //                     (evt.pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
+        //                 )),
+        //                 ..Default::default()
+        //             },
+        //         })
+        //         .id();
+        //     current_chunks.insert_entity(evt.pos, chunk_id);
+    }
+}
+
+#[derive(Component)]
+struct MeshedChunk {
+    chunk_mesh: Mesh,
+    raw_chunk: RawChunk,
+    pos: IVec3,
+}
+
+#[derive(Component)]
+pub struct ChunkGenTask(Task<MeshedChunk>);
+
+pub fn process_task(
+    mut commands: Commands,
+    mut chunk_query: Query<(Entity, &mut ChunkGenTask)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    texture_atlas: Res<Assets<TextureAtlas>>,
+    mut loadable_assets: ResMut<LoadableAssets>,
+) {
+    let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
+    for (entity, mut chunk_task) in &mut chunk_query {
+        if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
+            let collider = Collider::cuboid(0.0, 0.0, 0.0);
+            // };
+            commands.entity(entity).insert(RenderedChunk {
                 collider,
                 chunk: ChunkComp {
-                    chunk_data: evt.raw_chunk.clone(),
-                    pos: evt.pos.into(),
+                    chunk_data: chunk.raw_chunk.clone(),
+                    pos: chunk.pos.into(),
                     dirty: true,
                     entities: Vec::new(),
                     saved_entities: Vec::new(),
                 },
                 mesh: PbrBundle {
-                    mesh: meshes.add(mesh.clone()),
+                    mesh: meshes.add(chunk.chunk_mesh.clone()),
                     material: materials.add(StandardMaterial {
                         base_color: Color::WHITE,
                         base_color_texture: Some(
@@ -527,16 +593,119 @@ pub fn build_mesh(
                         ..default()
                     }),
                     transform: Transform::from_translation(Vec3::new(
-                        (evt.pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
-                        (evt.pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
-                        (evt.pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (chunk.pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (chunk.pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (chunk.pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
                     )),
                     ..Default::default()
                 },
-            })
-            .id();
-        current_chunks.insert_entity(evt.pos, chunk_id);
+            });
+
+            commands.entity(entity).insert(chunk);
+            commands.entity(entity).remove::<ChunkGenTask>();
+        }
     }
+}
+
+// TODO: Check if a chunk already exist
+pub fn process_queue(
+    mut chunk_queue: ResMut<ChunkQueue>,
+    mut commands: Commands,
+    mut event: EventReader<MeshChunkEvent>,
+    mut loadable_assets: ResMut<LoadableAssets>,
+    loadable_types: Res<LoadableTypes>,
+    texture_atlas: Res<Assets<TextureAtlas>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut current_chunks: ResMut<CurrentChunks>,
+) {
+    //TODO: Look into some other way to do this and profile it. Lots of clones for every chunk
+    let task_pool = AsyncComputeTaskPool::get();
+    let block_atlas: TextureAtlas = texture_atlas
+        .get(&loadable_assets.block_atlas)
+        .unwrap()
+        .clone();
+    chunk_queue
+        .mesh
+        .iter()
+        .cloned()
+        .map(|(chunk_pos, raw_chunk)| {
+            let cloned_types: LoadableTypes = loadable_types.clone();
+            let cloned_assets: LoadableAssets = loadable_assets.clone();
+            let clone_atlas: TextureAtlas = block_atlas.clone();
+            (
+                chunk_pos,
+                ChunkGenTask(task_pool.spawn(async move {
+                    let mesh_result = generate_mesh(&raw_chunk, &cloned_types);
+                    let mut positions = Vec::new();
+                    let mut indices = Vec::new();
+                    let mut normals = Vec::new();
+                    let mut uvs = Vec::new();
+                    let mut ao = Vec::new();
+                    for face in mesh_result.iter() {
+                        positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
+                        indices.extend_from_slice(&face.indices(positions.len() as u32));
+                        normals.extend_from_slice(&face.normals());
+                        ao.extend_from_slice(&calculate_ao(
+                            &raw_chunk,
+                            face.side,
+                            face.quad.voxel[0] as u32,
+                            face.quad.voxel[1] as u32,
+                            face.quad.voxel[2] as u32,
+                            &cloned_types,
+                        ));
+
+                        let texture_index = clone_atlas.get_texture_index(
+                            &cloned_assets
+                                .block_textures
+                                .get(
+                                    &raw_chunk
+                                        .get_state_for_index(
+                                            raw_chunk.voxels[RawChunk::linearize(UVec3::new(
+                                                face.quad.voxel[0] as u32,
+                                                face.quad.voxel[1] as u32,
+                                                face.quad.voxel[2] as u32,
+                                            ))]
+                                                as usize,
+                                        )
+                                        .unwrap(),
+                                )
+                                .unwrap()[0],
+                        );
+                        let face_coords = calculate_coords(
+                            texture_index.unwrap(),
+                            Vec2::new(16.0, 16.0),
+                            clone_atlas.size,
+                        );
+                        uvs.push(face_coords[0]);
+                        uvs.push(face_coords[1]);
+                        uvs.push(face_coords[2]);
+                        uvs.push(face_coords[3]);
+                    }
+
+                    let final_ao = ao_convert(ao);
+                    let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
+
+                    mesh.set_indices(Some(Indices::U32(indices)));
+
+                    mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
+                    mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+                    mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+                    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, final_ao);
+
+                    MeshedChunk {
+                        chunk_mesh: mesh,
+                        raw_chunk: raw_chunk.clone(),
+                        pos: chunk_pos,
+                    }
+                })),
+            )
+        })
+        .for_each(|(chunk_pos, chunk)| {
+            let chunk_id = commands.spawn(chunk).id();
+            current_chunks.insert_entity(chunk_pos, chunk_id);
+        });
+    chunk_queue.mesh.clear();
 }
 
 pub fn calculate_coords(index: usize, tile_size: Vec2, tilesheet_size: Vec2) -> [[f32; 2]; 4] {

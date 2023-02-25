@@ -6,7 +6,7 @@ use strum_macros::EnumString;
 
 use super::world::chunk::{GeometryType, VoxelVisibility};
 
-#[derive(Debug, PartialEq, EnumString, Default)]
+#[derive(Debug, PartialEq, EnumString, Default, Clone)]
 pub enum AiType {
     #[strum(ascii_case_insensitive)]
     #[default]
@@ -17,7 +17,7 @@ pub enum AiType {
     Swim,
 }
 
-#[derive(Debug, PartialEq, EnumString, Default)]
+#[derive(Debug, PartialEq, EnumString, Default, Clone)]
 pub enum BreakTool {
     #[strum(ascii_case_insensitive)]
     Shovel,
@@ -28,7 +28,7 @@ pub enum BreakTool {
     Axe,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlockType {
     pub namespace: String,
     pub block_name: String,
@@ -45,7 +45,7 @@ pub struct BlockType {
     pub block_geometry: GeometryType,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EntityType {
     pub namespace: String,
     pub entity_name: String,

@@ -12,7 +12,7 @@ pub const CHUNK_SIZE: u32 = 32;
 pub const CHUNK_SIZE_PADDED: u32 = CHUNK_SIZE + 1;
 pub const TOTAL_CHUNK_SIZE: u32 = CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED;
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Clone)]
 pub struct LoadableTypes {
     pub entities: HashMap<String, EntityType>,
     pub blocks: HashMap<String, BlockType>,
@@ -62,7 +62,7 @@ pub enum VoxelVisibility {
     Empty,
 }
 
-#[derive(Debug, PartialEq, EnumString, Default)]
+#[derive(Debug, PartialEq, EnumString, Default, Clone)]
 pub enum GeometryType {
     #[default]
     #[strum(ascii_case_insensitive)]

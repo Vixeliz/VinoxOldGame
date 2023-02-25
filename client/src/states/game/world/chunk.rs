@@ -3,7 +3,7 @@ use std::collections::{HashMap, HashSet};
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 use bimap::BiMap;
-use common::game::world::chunk::{ChunkComp, CHUNK_SIZE};
+use common::game::world::chunk::{ChunkComp, RawChunk, CHUNK_SIZE};
 
 use crate::states::game::networking::components::ControlledPlayer;
 
@@ -66,6 +66,11 @@ pub struct SimulationDistance {
     pub width: i32,
     pub depth: i32,
     pub height: i32,
+}
+
+#[derive(Default, Resource)]
+pub struct ChunkQueue {
+    pub mesh: Vec<(IVec3, RawChunk)>,
 }
 
 fn is_in_radius(pos: IVec3, min_bound: IVec3, max_bound: IVec3) -> Option<bool> {
@@ -132,6 +137,7 @@ pub struct ChunkHandling;
 impl Plugin for ChunkHandling {
     fn build(&self, app: &mut App) {
         app.insert_resource(CurrentChunks::default())
+            .insert_resource(ChunkQueue::default())
             .insert_resource(ViewDistance {
                 width: 8,
                 height: 6,

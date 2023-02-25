@@ -1270,6 +1270,7 @@ dependencies = [
  "bincode",
  "common",
  "directories",
+ "futures-lite",
  "iyes_loopless",
  "mlua",
  "ron",
