@@ -221,7 +221,7 @@ where
             chunk.get(x - 1, y - 1, z - 1),
             chunk.get(x - 1, y - 1, z),
             chunk.get(x - 1, y - 1, z + 1),
-            chunk.get(x - 1, y, z - 1),
+            chunk.get(x - 1, y, z + 1),
             chunk.get(x - 1, y + 1, z + 1),
             chunk.get(x - 1, y + 1, z),
             chunk.get(x - 1, y + 1, z - 1),
