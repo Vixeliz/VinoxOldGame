@@ -1,4 +1,5 @@
 use std::{
+    collections::HashSet,
     io::{Cursor, Write},
     mem::size_of_val,
 };
@@ -24,6 +25,11 @@ use crate::game::world::{
 
 use super::components::ServerLobby;
 
+#[derive(Component)]
+pub struct SentChunks {
+    chunks: HashSet<IVec3>,
+}
+
 // So i dont forget this is actually fine this is just receiving we are just sending out response packets which dont need to be limited since they only happen once per receive
 #[allow(clippy::too_many_arguments)]
 pub fn server_update_system(
@@ -31,7 +37,7 @@ pub fn server_update_system(
     mut commands: Commands,
     mut lobby: ResMut<ServerLobby>,
     mut server: ResMut<RenetServer>,
-    players: Query<(Entity, &Player, &Transform)>,
+    mut players: Query<(Entity, &Player, &Transform, &mut SentChunks)>,
     player_builder: Res<PlayerBundleBuilder>,
     mut chunk_manager: ChunkManager,
 ) {
@@ -41,7 +47,7 @@ pub fn server_update_system(
                 println!("Player {} connected.", id);
 
                 // Initialize other players for this new client
-                for (entity, player, transform) in players.iter() {
+                for (entity, player, transform, sent_chunks) in players.iter_mut() {
                     let translation: [f32; 3] = Vec3::from(transform.translation).into();
                     let rotation: [f32; 4] = Vec4::from(transform.rotation).into();
                     let message = bincode::serialize(&ServerMessages::PlayerCreate {
@@ -59,6 +65,9 @@ pub fn server_update_system(
                 // let player_entity = commands.spawn((transform, Player { id: *id })).id();
                 let player_entity = commands
                     .spawn(player_builder.build(transform.translation, *id, false))
+                    .insert(SentChunks {
+                        chunks: HashSet::new(),
+                    })
                     .id();
                 lobby.players.insert(*id, player_entity);
 
@@ -73,28 +82,30 @@ pub fn server_update_system(
                 .unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
                 let chunk_pos = chunk_manager.world_to_chunk(transform.translation);
-                chunk_manager.add_point(chunk_pos);
                 for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
-                    let raw_chunk = chunk.chunk_data.clone();
-                    if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
-                        chunk_data: raw_chunk.clone(),
-                        pos: chunk.pos.into(),
-                    }) {
-                        let mut final_chunk = Cursor::new(raw_chunk_bin);
-                        let mut output = Cursor::new(Vec::new());
-                        copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                        if size_of_val(output.get_ref().as_slice()) <= 10000 {
-                            server.send_message(
-                                *id,
-                                ServerChannel::LevelDataSmall,
-                                output.get_ref().clone(),
-                            );
-                        } else {
-                            server.send_message(
-                                *id,
-                                ServerChannel::LevelDataLarge,
-                                output.get_ref().clone(),
-                            );
+                    if let Ok((_, _, _, mut sent_chunks)) = players.get_mut(player_entity) {
+                        sent_chunks.chunks.insert(chunk.pos);
+                        let raw_chunk = chunk.chunk_data.clone();
+                        if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
+                            chunk_data: raw_chunk.clone(),
+                            pos: chunk.pos.into(),
+                        }) {
+                            let mut final_chunk = Cursor::new(raw_chunk_bin);
+                            let mut output = Cursor::new(Vec::new());
+                            copy_encode(&mut final_chunk, &mut output, 0).unwrap();
+                            if size_of_val(output.get_ref().as_slice()) <= 10000 {
+                                server.send_message(
+                                    *id,
+                                    ServerChannel::LevelDataSmall,
+                                    output.get_ref().clone(),
+                                );
+                            } else {
+                                server.send_message(
+                                    *id,
+                                    ServerChannel::LevelDataLarge,
+                                    output.get_ref().clone(),
+                                );
+                            }
                         }
                     }
                 }
@@ -139,4 +150,47 @@ pub fn server_network_sync(mut server: ResMut<RenetServer>, query: Query<(Entity
 
     let sync_message = bincode::serialize(&networked_entities).unwrap();
     server.broadcast_message(ServerChannel::NetworkedEntities, sync_message);
+}
+
+pub fn send_chunks(
+    mut server: ResMut<RenetServer>,
+    mut lobby: ResMut<ServerLobby>,
+    mut players: Query<(&Transform, &mut SentChunks), With<Player>>,
+    mut chunk_manager: ChunkManager,
+) {
+    for client_id in server.clients_id().into_iter() {
+        if let Some(player_entity) = lobby.players.get(&client_id) {
+            if let Ok((player_transform, mut sent_chunks)) = players.get_mut(*player_entity) {
+                let chunk_pos = chunk_manager.world_to_chunk(player_transform.translation);
+                chunk_manager.add_point(chunk_pos, client_id);
+                for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
+                    if !sent_chunks.chunks.contains(&chunk.pos) {
+                        let raw_chunk = chunk.chunk_data.clone();
+                        if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
+                            chunk_data: raw_chunk.clone(),
+                            pos: chunk.pos.into(),
+                        }) {
+                            let mut final_chunk = Cursor::new(raw_chunk_bin);
+                            let mut output = Cursor::new(Vec::new());
+                            copy_encode(&mut final_chunk, &mut output, 0).unwrap();
+                            if size_of_val(output.get_ref().as_slice()) <= 10000 {
+                                server.send_message(
+                                    client_id,
+                                    ServerChannel::LevelDataSmall,
+                                    output.get_ref().clone(),
+                                );
+                            } else {
+                                server.send_message(
+                                    client_id,
+                                    ServerChannel::LevelDataLarge,
+                                    output.get_ref().clone(),
+                                );
+                            }
+                            sent_chunks.chunks.insert(chunk.pos);
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

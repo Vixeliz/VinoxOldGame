@@ -18,10 +18,11 @@ use common::{
         ServerMessages,
     },
 };
+use iyes_loopless::state::NextState;
 use zstd::stream::copy_decode;
 
 use crate::{
-    components::Game,
+    components::{Game, GameState},
     states::{
         game::{
             input::CameraController,
@@ -202,5 +203,11 @@ pub fn client_send_naive_position(
 
             client.send_message(ClientChannel::Position, input_message);
         }
+    }
+}
+pub fn client_disconect(mut commands: Commands, client: Res<RenetClient>) {
+    if client.disconnected().is_some() {
+        println!("{}", client.disconnected().unwrap());
+        commands.insert_resource(NextState(GameState::Menu));
     }
 }

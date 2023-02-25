@@ -1,13 +1,13 @@
+use super::generation::generate_chunk;
 use bevy::{
     ecs::system::SystemParam,
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
+use bimap::BiMap;
 use common::game::world::chunk::{ChunkComp, CHUNK_SIZE};
-use std::collections::*;
-
-use super::generation::generate_chunk;
 use futures_lite::future;
+use std::collections::*;
 
 #[derive(Resource, Default)]
 pub struct CurrentChunks {
@@ -30,7 +30,7 @@ impl CurrentChunks {
 
 #[derive(Resource, Default)]
 pub struct CurrentLoadPoints {
-    pub points: Vec<IVec3>,
+    pub points: BiMap<IVec3, u64>,
 }
 
 #[derive(Resource)]
@@ -115,8 +115,8 @@ impl<'w, 's> ChunkManager<'w, 's> {
         )
     }
 
-    pub fn add_point(&mut self, pos: IVec3) {
-        self.current_load_points.points.push(pos);
+    pub fn add_point(&mut self, pos: IVec3, owner: u64) {
+        self.current_load_points.points.insert(pos, owner);
     }
 }
 
@@ -126,7 +126,7 @@ pub fn generate_chunks_world(
     mut chunk_queue: ResMut<ChunkQueue>,
     current_chunks: ResMut<CurrentChunks>,
 ) {
-    for point in current_load_points.points.iter() {
+    for point in current_load_points.points.left_values() {
         for x in -view_distance.width / 2..view_distance.width / 2 {
             for y in -view_distance.height / 2..view_distance.height / 2 {
                 for z in -view_distance.depth / 2..view_distance.depth / 2 {

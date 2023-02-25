@@ -129,6 +129,7 @@ impl ServerChannel {
             .into(),
             ReliableChannelConfig {
                 channel_id: Self::LevelDataSmall.into(),
+                max_message_size: 10000,
                 packet_budget: 10000,
                 ..Default::default()
             }

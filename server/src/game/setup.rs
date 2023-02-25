@@ -11,7 +11,7 @@ use common::{
 use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
 
 pub fn setup(_commands: Commands, mut chunk_manager: ChunkManager) {
-    chunk_manager.add_point(IVec3 { x: 0, y: 0, z: 0 });
+    chunk_manager.add_point(IVec3 { x: 0, y: 0, z: 0 }, 0);
 }
 
 use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
@@ -80,6 +80,7 @@ impl Plugin for GamePlugin {
             .add_system(panic_on_error_system)
             .add_system(syncing::server_update_system)
             .add_fixed_timestep_system("network_update", 0, syncing::server_network_sync)
+            .add_fixed_timestep_system("network_update", 0, syncing::send_chunks)
             .add_startup_system(setup)
             .insert_resource(ServerLobby::default());
     }
