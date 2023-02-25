@@ -1,4 +1,6 @@
-use bevy::{app::ScheduleRunnerSettings, prelude::*};
+use bevy::{
+    app::ScheduleRunnerSettings, diagnostic::DiagnosticsPlugin, log::LogPlugin, prelude::*,
+};
 use bevy_renet::RenetServerPlugin;
 use common::networking::components::NetworkIP;
 use game::setup::GamePlugin;
@@ -26,6 +28,8 @@ fn main() {
         )))
         .insert_resource(NetworkIP(ip))
         .add_plugins(MinimalPlugins)
+        .add_plugin(DiagnosticsPlugin)
+        // .add_plugin(LogPlugin::default())
         .add_plugin(RenetServerPlugin::default())
         .add_fixed_timestep(
             Duration::from_millis(16),
