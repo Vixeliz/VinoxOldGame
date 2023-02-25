@@ -213,42 +213,71 @@ where
     T: Voxel,
 {
     let neighbours: [T; 8];
-    if current_side == Side::new(Axis::X, false) || current_side == Side::new(Axis::X, true) {
-        // left or right
+    if current_side == Side::new(Axis::X, false) {
         neighbours = [
-            chunk.get(x, y, z + 1),
-            chunk.get(x, y - 1, z + 1),
-            chunk.get(x, y - 1, z),
-            chunk.get(x, y - 1, z - 1),
-            chunk.get(x, y, z - 1),
-            chunk.get(x, y + 1, z - 1),
-            chunk.get(x, y + 1, z),
-            chunk.get(x, y + 1, z + 1),
-        ];
-    } else if current_side == Side::new(Axis::Y, false) || current_side == Side::new(Axis::Y, true)
-    {
-        // bottom or top
-        neighbours = [
-            chunk.get(x, y, z + 1),
-            chunk.get(x - 1, y, z + 1),
-            chunk.get(x - 1, y, z),
             chunk.get(x - 1, y, z - 1),
-            chunk.get(x, y, z - 1),
-            chunk.get(x + 1, y, z - 1),
-            chunk.get(x + 1, y, z),
+            chunk.get(x - 1, y - 1, z - 1),
+            chunk.get(x - 1, y - 1, z),
+            chunk.get(x - 1, y - 1, z + 1),
+            chunk.get(x - 1, y, z - 1),
+            chunk.get(x - 1, y + 1, z + 1),
+            chunk.get(x - 1, y + 1, z),
+            chunk.get(x - 1, y + 1, z - 1),
+        ];
+    } else if current_side == Side::new(Axis::X, true) {
+        neighbours = [
             chunk.get(x + 1, y, z + 1),
+            chunk.get(x + 1, y - 1, z + 1),
+            chunk.get(x + 1, y - 1, z),
+            chunk.get(x + 1, y - 1, z - 1),
+            chunk.get(x + 1, y, z - 1),
+            chunk.get(x + 1, y + 1, z - 1),
+            chunk.get(x + 1, y + 1, z),
+            chunk.get(x + 1, y + 1, z + 1),
+        ];
+    } else if current_side == Side::new(Axis::Y, false) {
+        neighbours = [
+            chunk.get(x, y - 1, z + 1),
+            chunk.get(x - 1, y - 1, z + 1),
+            chunk.get(x - 1, y - 1, z),
+            chunk.get(x - 1, y - 1, z - 1),
+            chunk.get(x, y - 1, z - 1),
+            chunk.get(x + 1, y - 1, z - 1),
+            chunk.get(x + 1, y - 1, z),
+            chunk.get(x + 1, y - 1, z + 1),
+        ];
+    } else if current_side == Side::new(Axis::Y, true) {
+        neighbours = [
+            chunk.get(x, y + 1, z - 1),
+            chunk.get(x - 1, y + 1, z - 1),
+            chunk.get(x - 1, y + 1, z),
+            chunk.get(x - 1, y + 1, z + 1),
+            chunk.get(x, y + 1, z + 1),
+            chunk.get(x + 1, y + 1, z + 1),
+            chunk.get(x + 1, y + 1, z),
+            chunk.get(x + 1, y + 1, z - 1),
+        ];
+    } else if current_side == Side::new(Axis::Z, true) {
+        neighbours = [
+            chunk.get(x - 1, y, z + 1),
+            chunk.get(x - 1, y - 1, z + 1),
+            chunk.get(x, y - 1, z + 1),
+            chunk.get(x + 1, y - 1, z + 1),
+            chunk.get(x + 1, y, z + 1),
+            chunk.get(x + 1, y + 1, z + 1),
+            chunk.get(x, y + 1, z + 1),
+            chunk.get(x - 1, y + 1, z + 1),
         ];
     } else {
-        // back or front
         neighbours = [
-            chunk.get(x + 1, y, z),
-            chunk.get(x + 1, y - 1, z),
-            chunk.get(x, y - 1, z),
-            chunk.get(x - 1, y - 1, z),
-            chunk.get(x - 1, y, z),
-            chunk.get(x - 1, y + 1, z),
-            chunk.get(x, y + 1, z),
-            chunk.get(x + 1, y + 1, z),
+            chunk.get(x + 1, y, z - 1),
+            chunk.get(x + 1, y - 1, z - 1),
+            chunk.get(x, y - 1, z - 1),
+            chunk.get(x - 1, y - 1, z - 1),
+            chunk.get(x - 1, y, z - 1),
+            chunk.get(x - 1, y + 1, z - 1),
+            chunk.get(x, y + 1, z - 1),
+            chunk.get(x + 1, y + 1, z - 1),
         ];
     }
 
