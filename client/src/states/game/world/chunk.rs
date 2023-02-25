@@ -148,6 +148,6 @@ impl Plugin for ChunkHandling {
                 height: 4,
                 depth: 4,
             })
-            .add_system(clear_unloaded_chunks);
+            .add_system_to_stage(CoreStage::PostUpdate, clear_unloaded_chunks);
     }
 }
