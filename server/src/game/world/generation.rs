@@ -35,6 +35,25 @@ pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
                     raw_chunk
                         .set_block(UVec3::new(x as u32, y as u32, z as u32), "air".to_string());
                 }
+
+                // let mut multi_noise = simplex_noise.get([
+                //     full_x as f64 / 10.0,
+                //     full_z as f64 / 10.0,
+                //     full_y as f64 / 10.0,
+                // ]);
+
+                // // let change = if full_y >= -16 {
+                // //     (full_y / 8) as f64
+                // // } else {
+                // //     1.0
+                // // };
+
+                // // multi_noise *= change;
+
+                // if multi_noise >= 0.25 {
+                //     raw_chunk
+                //         .set_block(UVec3::new(x as u32, y as u32, z as u32), "air".to_string());
+                // }
             }
         }
     }
