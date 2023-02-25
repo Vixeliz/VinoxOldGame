@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use common::game::world::chunk::*;
 use noise::*;
+use rand::Rng;
 
 pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
     //TODO: Switch to using ron files to determine biomes and what blocks they should use. For now hardcoding a simplex noise

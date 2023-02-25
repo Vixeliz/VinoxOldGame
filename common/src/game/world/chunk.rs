@@ -8,13 +8,46 @@ pub const CHUNK_SIZE: u32 = 32;
 pub const CHUNK_SIZE_PADDED: u32 = CHUNK_SIZE + 1;
 pub const TOTAL_CHUNK_SIZE: u32 = CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED;
 
-#[derive(Debug, PartialEq, EnumString, Default)]
+pub trait Chunk {
+    type Output;
+
+    const X: usize;
+    const Y: usize;
+    const Z: usize;
+
+    fn size() -> usize {
+        Self::X * Self::Y * Self::Z
+    }
+
+    fn linearize(pos: UVec3) -> usize {
+        let x = pos.x as usize;
+        let y = pos.y as usize;
+        let z = pos.z as usize;
+        x + (y * Self::X) + (z * Self::X * Self::Y)
+    }
+
+    fn delinearize(mut index: usize) -> (u32, u32, u32) {
+        let z = index / (Self::X * Self::Y);
+        index -= z * (Self::X * Self::Y);
+
+        let y = index / Self::X;
+        index -= y * Self::X;
+
+        let x = index;
+
+        (x as u32, y as u32, z as u32)
+    }
+
+    fn get(&self, x: u32, y: u32, z: u32) -> Self::Output;
+}
+
+#[derive(Debug, PartialEq, EnumString, Default, Eq, Clone, Copy)]
 pub enum VoxelVisibility {
     #[default]
     #[strum(ascii_case_insensitive)]
     Opaque,
     #[strum(ascii_case_insensitive)]
-    Translucent,
+    Transparent,
     #[strum(ascii_case_insensitive)]
     Empty,
 }
@@ -33,7 +66,7 @@ pub enum GeometryType {
 }
 
 #[derive(Component)]
-pub struct Chunk {
+pub struct ChunkComp {
     pub pos: IVec3,
     pub chunk_data: RawChunk,
     pub entities: Vec<Entity>,
@@ -41,18 +74,49 @@ pub struct Chunk {
     pub dirty: bool,
 }
 
+pub trait Voxel: Eq {
+    fn visibility(&self) -> VoxelVisibility;
+}
+
 #[derive(Copy, Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Voxel {
-    pub value: u16,
+pub enum VoxelType {
+    Empty(u16),
+    Opaque(u16),
+    Transparent(u16),
 }
 
-impl Voxel {
-    pub const EMPTY_VOXEL: Voxel = Voxel { value: 0 };
+impl Default for VoxelType {
+    fn default() -> VoxelType {
+        Self::Empty(0)
+    }
 }
 
-impl Default for Voxel {
-    fn default() -> Self {
-        Self::EMPTY_VOXEL
+impl<'s> Voxel for VoxelType {
+    fn visibility(&self) -> VoxelVisibility {
+        match self {
+            Self::Empty(_) => VoxelVisibility::Empty,
+            Self::Opaque(_) => VoxelVisibility::Opaque,
+            Self::Transparent(_) => VoxelVisibility::Transparent,
+        }
+    }
+}
+
+macro_rules! as_variant {
+    ($value:expr, $variant:path) => {
+        match $value {
+            $variant(x) => Some(x),
+            _ => None,
+        }
+    };
+}
+
+impl VoxelType {
+    pub fn value(self) -> u16 {
+        match self {
+            Self::Empty(_) => as_variant!(self, VoxelType::Empty).unwrap_or(0),
+            Self::Opaque(_) => as_variant!(self, VoxelType::Opaque).unwrap_or(0),
+            Self::Transparent(_) => as_variant!(self, VoxelType::Transparent).unwrap_or(0),
+        }
     }
 }
 
@@ -60,17 +124,29 @@ impl Default for Voxel {
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
     #[serde(with = "BigArray")]
-    pub voxels: [Voxel; TOTAL_CHUNK_SIZE as usize],
+    pub voxels: [VoxelType; TOTAL_CHUNK_SIZE as usize],
 }
 
-impl Default for RawChunk {
+impl<'s> Default for RawChunk {
     fn default() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: [Voxel { value: 0 }; TOTAL_CHUNK_SIZE as usize],
+            voxels: [VoxelType::default(); TOTAL_CHUNK_SIZE as usize],
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
+    }
+}
+
+impl Chunk for RawChunk {
+    type Output = VoxelType;
+
+    const X: usize = CHUNK_SIZE_PADDED as usize;
+    const Y: usize = CHUNK_SIZE_PADDED as usize;
+    const Z: usize = CHUNK_SIZE_PADDED as usize;
+
+    fn get(&self, x: u32, y: u32, z: u32) -> Self::Output {
+        self.voxels[Self::linearize(UVec3::new(x, y, z))]
     }
 }
 
@@ -79,7 +155,7 @@ impl RawChunk {
     pub fn new() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: [Voxel { value: 0 }; TOTAL_CHUNK_SIZE as usize],
+            voxels: [VoxelType::default(); TOTAL_CHUNK_SIZE as usize],
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -100,13 +176,15 @@ impl RawChunk {
     // rewrite this if it causes major performance issues
     pub fn update_chunk_pal(&mut self, old_vec: &Vec<String>) {
         for i in 0..self.voxels.len() {
-            if let Some(block_data) = old_vec.get(self.voxels[i].value as usize) {
+            if let Some(block_data) = old_vec.get(self.voxels[i].value() as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
-                    self.voxels[i] = Voxel {
-                        value: new_index as u16,
-                    }; // TODO: Transluency
+                    if new_index == 0 {
+                        self.voxels[i] = VoxelType::Empty(new_index as u16);
+                    } else {
+                        self.voxels[i] = VoxelType::Opaque(new_index as u16);
+                    }
                 } else {
-                    self.voxels[i] = Voxel { value: 0 };
+                    self.voxels[i] = VoxelType::default();
                 }
             }
         }
@@ -142,11 +220,13 @@ impl RawChunk {
             && pos.z > 0
             && pos.z < (CHUNK_SIZE) as u32
         {
-            let index = flatten_coord(pos);
+            let index = RawChunk::linearize(pos);
             if let Some(block_type) = self.get_index_for_state(&block_data) {
-                self.voxels[index] = Voxel {
-                    value: block_type as u16,
-                }; // TODO: Set translucent based off of block
+                if block_type == 0 {
+                    self.voxels[index] = VoxelType::Empty(0);
+                } else {
+                    self.voxels[index] = VoxelType::Opaque(block_type as u16); // Set based off of transluency
+                }
             } else {
                 warn!("Voxel doesn't exist");
             }
@@ -162,8 +242,8 @@ impl RawChunk {
             && pos.z > 0
             && pos.z < (CHUNK_SIZE) as u32
         {
-            let index = flatten_coord(pos);
-            self.get_state_for_index(self.voxels[index].value as usize)
+            let index = RawChunk::linearize(pos);
+            self.get_state_for_index(self.voxels[index].value() as usize)
                 .map(|block_state| block_state)
         } else {
             warn!("Voxel position outside of this chunks bounds");
@@ -178,8 +258,4 @@ impl RawChunk {
             VoxelVisibility::Opaque
         }
     }
-}
-
-pub fn flatten_coord(coords: UVec3) -> usize {
-    (coords.x + CHUNK_SIZE_PADDED * (coords.y + CHUNK_SIZE_PADDED * coords.z)) as usize
 }

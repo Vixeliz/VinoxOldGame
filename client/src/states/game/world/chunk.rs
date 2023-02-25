@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
-use common::game::world::chunk::Chunk;
+use common::game::world::chunk::ChunkComp;
 
 #[derive(Bundle)]
 pub struct RenderedChunk {
-    pub chunk: Chunk,
+    pub chunk: ChunkComp,
     #[bundle]
     pub mesh: PbrBundle,
     pub collider: Collider,

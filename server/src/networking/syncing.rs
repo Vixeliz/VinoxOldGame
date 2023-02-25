@@ -6,7 +6,7 @@ use std::{
 use bevy::{math::Vec3Swizzles, prelude::*};
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
+    game::{bundles::PlayerBundleBuilder, world::chunk::ChunkComp},
     networking::components::{
         ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages,

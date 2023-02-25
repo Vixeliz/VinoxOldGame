@@ -129,7 +129,7 @@ impl ServerChannel {
             .into(),
             ReliableChannelConfig {
                 channel_id: Self::LevelDataSmall.into(),
-                message_resend_time: Duration::from_millis(100),
+                packet_budget: 10000,
                 ..Default::default()
             }
             .into(),

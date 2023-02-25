@@ -3,7 +3,7 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
-use common::game::world::chunk::{Chunk, CHUNK_SIZE};
+use common::game::world::chunk::{ChunkComp, CHUNK_SIZE};
 use std::collections::*;
 
 use super::generation::generate_chunk;
@@ -80,14 +80,14 @@ pub struct ChunkManager<'w, 's> {
     chunk_queue: ResMut<'w, ChunkQueue>,
     current_load_points: ResMut<'w, CurrentLoadPoints>,
     view_distance: Res<'w, ViewDistance>,
-    chunk_query: Query<'w, 's, &'static Chunk>,
+    chunk_query: Query<'w, 's, &'static ChunkComp>,
 }
 
 impl<'w, 's> ChunkManager<'w, 's> {
     pub fn add_chunk_to_queue(&mut self, pos: IVec3) {
         self.chunk_queue.create.push(pos);
     }
-    pub fn get_chunks_around_chunk(&mut self, pos: IVec3) -> Vec<&Chunk> {
+    pub fn get_chunks_around_chunk(&mut self, pos: IVec3) -> Vec<&ChunkComp> {
         let mut res = Vec::new();
         for x in -self.view_distance.width / 2..self.view_distance.width / 2 {
             for y in -self.view_distance.height / 2..self.view_distance.height / 2 {
@@ -142,7 +142,7 @@ pub fn generate_chunks_world(
 }
 
 #[derive(Component)]
-pub struct ChunkGenTask(Task<Chunk>);
+pub struct ChunkGenTask(Task<ChunkComp>);
 
 pub fn process_task(mut commands: Commands, mut chunk_query: Query<(Entity, &mut ChunkGenTask)>) {
     for (entity, mut chunk_task) in &mut chunk_query {
@@ -168,7 +168,7 @@ pub fn process_queue(
             (
                 chunk_pos,
                 ChunkGenTask(task_pool.spawn(async move {
-                    Chunk {
+                    ChunkComp {
                         pos: chunk_pos,
                         chunk_data: generate_chunk(chunk_pos, 0),
                         dirty: false,

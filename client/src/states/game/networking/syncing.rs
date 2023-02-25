@@ -127,6 +127,21 @@ pub fn client_sync_players(
             }
         }
     }
+
+    while let Some(message) = client.receive_message(ServerChannel::LevelDataLarge) {
+        let mut temp_output = Cursor::new(Vec::new());
+        copy_decode(&message[..], &mut temp_output).unwrap();
+        let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
+        match level_data {
+            LevelData::ChunkCreate { chunk_data, pos } => {
+                println!("Recieved chunk {pos:?}");
+                chunk_mesh_event.send(MeshChunkEvent {
+                    raw_chunk: chunk_data,
+                    pos: pos.into(),
+                });
+            }
+        }
+    }
 }
 
 pub fn lerp_new_location(
