@@ -3,7 +3,7 @@
 ## HEAVILY IN DEVELOPMENT STILL NOTHING HERE IS FINAL AND THE CODE NEEDS REFACTORING
 
 Sandbox survival game made with Rust and bevy.
-The goal of this project is somewhat like minetest but a much more limited scripting system at first with the upside of a more comprehensive base game and
+The goal of this project is somewhat like minetest(very loosely heavily focused on only being for sandbox survival games and revolves around the base game) but a much more limited scripting system at first with the upside of a more comprehensive base game and
 more modern engine technology.
 
 Reasons for the license choices:
