@@ -96,8 +96,12 @@ impl QuadGroups {
 }
 
 impl<'a> Face<'a> {
-    pub fn indices(&self, start: u32) -> [u32; 6] {
-        [start, start + 2, start + 1, start + 1, start + 2, start + 3]
+    pub fn indices(&self, start: u32, flipped: bool) -> [u32; 6] {
+        if flipped {
+            [start, start + 2, start + 1, start + 1, start + 2, start + 3]
+        } else {
+            [start, start + 3, start + 1, start, start + 2, start + 3]
+        }
     }
 
     pub fn positions(&self, voxel_size: f32) -> [[f32; 3]; 4] {
@@ -484,13 +488,13 @@ pub fn process_task(
                     mesh: meshes.add(chunk.chunk_mesh.clone()),
                     material: materials.add(StandardMaterial {
                         base_color: Color::WHITE,
-                        base_color_texture: Some(
-                            texture_atlas
-                                .get(&loadable_assets.block_atlas)
-                                .unwrap()
-                                .texture
-                                .clone(),
-                        ),
+                        // base_color_texture: Some(
+                        //     texture_atlas
+                        //         .get(&loadable_assets.block_atlas)
+                        //         .unwrap()
+                        //         .texture
+                        //         .clone(),
+                        // ),
                         alpha_mode: AlphaMode::Mask(1.0),
                         perceptual_roughness: 1.0,
                         ..default()
@@ -547,16 +551,30 @@ pub fn process_queue(
                     let mut ao = Vec::new();
                     for face in mesh_result.iter() {
                         positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
-                        indices.extend_from_slice(&face.indices(positions.len() as u32));
                         normals.extend_from_slice(&face.normals());
-                        ao.extend_from_slice(&calculate_ao(
+                        let calculated_ao = calculate_ao(
                             &raw_chunk,
                             face.side,
                             face.quad.voxel[0] as u32,
                             face.quad.voxel[1] as u32,
                             face.quad.voxel[2] as u32,
                             &cloned_types,
-                        ));
+                        );
+                        if calculated_ao[0] != 3
+                            || calculated_ao[1] != 3
+                            || calculated_ao[2] != 3
+                            || calculated_ao[3] != 3
+                        {
+                            println!("ao: {:?}", calculated_ao);
+                        }
+                        if (calculated_ao[1] + calculated_ao[3])
+                            > (calculated_ao[2] + calculated_ao[0])
+                        {
+                            indices.extend_from_slice(&face.indices(positions.len() as u32, true));
+                        } else {
+                            indices.extend_from_slice(&face.indices(positions.len() as u32, false));
+                        }
+                        ao.extend_from_slice(&calculated_ao);
 
                         let texture_index = clone_atlas.get_texture_index(
                             &cloned_assets
@@ -635,9 +653,9 @@ fn ao_convert(ao: Vec<u8>) -> Vec<[f32; 4]> {
     let mut res = Vec::new();
     for value in ao {
         match value {
-            0 => res.extend_from_slice(&[[0.3, 0.3, 0.3, 1.0]]),
-            1 => res.extend_from_slice(&[[0.5, 0.5, 0.5, 1.0]]),
-            2 => res.extend_from_slice(&[[0.75, 0.75, 0.75, 1.0]]),
+            0 => res.extend_from_slice(&[[0.1, 0.1, 0.1, 1.0]]),
+            1 => res.extend_from_slice(&[[0.25, 0.25, 0.25, 1.0]]),
+            2 => res.extend_from_slice(&[[0.5, 0.5, 0.5, 1.0]]),
             _ => res.extend_from_slice(&[[1., 1., 1., 1.0]]),
         }
     }
