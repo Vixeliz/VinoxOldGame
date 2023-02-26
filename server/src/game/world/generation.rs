@@ -17,55 +17,21 @@ pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
                 let noise_val =
                     ridged_noise.get([(full_x as f64 / 100.0), (full_z as f64 / 100.0)]) * 100.0;
 
-                // if full_y as f64 <= noise_val && full_y as f64 >= (noise_val - 2.0) {
-                //     raw_chunk.add_block_state(&"vinoxgrass".to_string());
-                //     raw_chunk.set_block(
-                //         UVec3::new(x as u32, y as u32, z as u32),
-                //         "vinoxgrass".to_string(),
-                //     );
-                // } else if full_y as f64 <= noise_val {
-                //     raw_chunk.add_block_state(&"vinoxdirt".to_string());
-                //     raw_chunk.set_block(
-                //         UVec3::new(x as u32, y as u32, z as u32),
-                //         "vinoxdirt".to_string(),
-                //     );
-                // } else {
-                //     raw_chunk
-                //         .set_block(UVec3::new(x as u32, y as u32, z as u32), "air".to_string());
-                // }
-
-                if full_y <= 33 {
+                if full_y as f64 <= noise_val && full_y as f64 >= (noise_val - 2.0) {
                     raw_chunk.add_block_state(&"vinoxgrass".to_string());
                     raw_chunk.set_block(
                         UVec3::new(x as u32, y as u32, z as u32),
                         "vinoxgrass".to_string(),
                     );
+                } else if full_y as f64 <= noise_val {
+                    raw_chunk.add_block_state(&"vinoxdirt".to_string());
+                    raw_chunk.set_block(
+                        UVec3::new(x as u32, y as u32, z as u32),
+                        "vinoxdirt".to_string(),
+                    );
                 } else {
                     raw_chunk
                         .set_block(UVec3::new(x as u32, y as u32, z as u32), "air".to_string());
-                }
-
-                if x == 16 && y == 2 && z == 16 {
-                    raw_chunk.add_block_state(&"vinoxdirt".to_string());
-                    raw_chunk.set_block(
-                        UVec3::new(x as u32, y as u32, z as u32),
-                        "vinoxdirt".to_string(),
-                    );
-                }
-
-                if x == 1 && y == 2 && z == 1 {
-                    raw_chunk.add_block_state(&"vinoxdirt".to_string());
-                    raw_chunk.set_block(
-                        UVec3::new(x as u32, y as u32, z as u32),
-                        "vinoxdirt".to_string(),
-                    );
-                }
-                if x == 2 && y == 2 && z == 2 {
-                    raw_chunk.add_block_state(&"vinoxcobblestone".to_string());
-                    raw_chunk.set_block(
-                        UVec3::new(x as u32, y as u32, z as u32),
-                        "vinoxcobblestone".to_string(),
-                    );
                 }
 
                 // let multi_noise = ridged_noise.get([

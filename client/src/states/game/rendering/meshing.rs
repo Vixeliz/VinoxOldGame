@@ -488,13 +488,13 @@ pub fn process_task(
                     mesh: meshes.add(chunk.chunk_mesh.clone()),
                     material: materials.add(StandardMaterial {
                         base_color: Color::WHITE,
-                        // base_color_texture: Some(
-                        //     texture_atlas
-                        //         .get(&loadable_assets.block_atlas)
-                        //         .unwrap()
-                        //         .texture
-                        //         .clone(),
-                        // ),
+                        base_color_texture: Some(
+                            texture_atlas
+                                .get(&loadable_assets.block_atlas)
+                                .unwrap()
+                                .texture
+                                .clone(),
+                        ),
                         alpha_mode: AlphaMode::Mask(1.0),
                         perceptual_roughness: 1.0,
                         ..default()
