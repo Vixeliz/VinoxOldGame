@@ -74,8 +74,8 @@ pub struct SimulationDistance {
 
 #[derive(Default, Resource)]
 pub struct ChunkQueue {
-    pub create: Vec<IVec3>,
-    pub remove: Vec<IVec3>,
+    pub create: HashSet<IVec3>,
+    pub remove: HashSet<IVec3>,
 }
 
 impl CurrentLoadPoints {
@@ -106,7 +106,7 @@ pub struct ChunkManager<'w, 's> {
 
 impl<'w, 's> ChunkManager<'w, 's> {
     pub fn add_chunk_to_queue(&mut self, pos: IVec3) {
-        self.chunk_queue.create.push(pos);
+        self.chunk_queue.create.insert(pos);
     }
     pub fn get_chunks_around_chunk(&mut self, pos: IVec3) -> Vec<&ChunkComp> {
         let mut res = Vec::new();
@@ -155,7 +155,7 @@ pub fn generate_chunks_world(
                     if current_chunks.get_entity(pos).is_some() {
                         break;
                     }
-                    chunk_queue.create.push(pos);
+                    chunk_queue.create.insert(pos);
                 }
             }
         }
