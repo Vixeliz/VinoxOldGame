@@ -1,9 +1,11 @@
 use std::{io::Cursor, time::Duration};
 
 use bevy::{
+    core_pipeline::bloom::BloomSettings,
     prelude::*,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
+use bevy_atmosphere::prelude::*;
 use bevy_easings::{Ease, EaseMethod, EasingType};
 
 use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
@@ -67,10 +69,16 @@ pub fn client_sync_players(
                         .spawn((
                             Game,
                             Camera3dBundle {
+                                camera: Camera {
+                                    hdr: true,
+                                    ..default()
+                                },
                                 transform: Transform::from_translation(Vec3::new(0.0, 1.0, 0.0)),
                                 ..default()
                             },
                             CameraController::default(),
+                            BloomSettings::default(),
+                            AtmosphereCamera::default(),
                         ))
                         .id();
                     client_entity.push_children(&[camera_id]);
@@ -120,7 +128,7 @@ pub fn client_sync_players(
         let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
-                println!("Recieved chunk {pos:?}");
+                // println!("Recieved chunk {pos:?}");
                 chunk_mesh_event.send(MeshChunkEvent {
                     raw_chunk: chunk_data,
                     pos: pos.into(),
@@ -135,7 +143,7 @@ pub fn client_sync_players(
         let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
-                println!("Recieved chunk {pos:?}");
+                // println!("Recieved chunk {pos:?}");
                 chunk_mesh_event.send(MeshChunkEvent {
                     raw_chunk: chunk_data,
                     pos: pos.into(),

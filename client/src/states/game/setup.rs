@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use super::input;
 use super::networking::{
     components::{ClientLobby, NetworkMapping},
@@ -6,6 +8,7 @@ use super::networking::{
 use super::rendering::meshing;
 use super::world::chunk::ChunkHandling;
 use bevy::prelude::*;
+use bevy_atmosphere::prelude::*;
 use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use common::networking::components::EntityBuffer;
 use iyes_loopless::prelude::*;
@@ -16,6 +19,17 @@ use crate::{
 };
 
 pub fn setup(mut commands: Commands) {
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            color: Color::WHITE,
+            illuminance: 1500.0,
+            shadows_enabled: true,
+            ..default()
+        },
+        transform: Transform::from_translation(Vec3::new(0.0, 100.0, 0.0))
+            .with_rotation(Quat::from_rotation_x(-PI / 4.)),
+        ..default()
+    });
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
         brightness: 0.75,
@@ -28,6 +42,7 @@ impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
             .add_plugin(ChunkHandling)
+            .add_plugin(AtmospherePlugin)
             .insert_resource(RapierConfiguration { ..default() })
             .insert_resource(NetworkMapping::default())
             .insert_resource(ClientLobby::default())
