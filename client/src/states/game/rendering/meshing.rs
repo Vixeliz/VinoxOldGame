@@ -560,13 +560,6 @@ pub fn process_queue(
                             face.quad.voxel[2] as u32,
                             &cloned_types,
                         );
-                        if calculated_ao[0] != 3
-                            || calculated_ao[1] != 3
-                            || calculated_ao[2] != 3
-                            || calculated_ao[3] != 3
-                        {
-                            println!("ao: {:?}", calculated_ao);
-                        }
                         if (calculated_ao[1] + calculated_ao[3])
                             > (calculated_ao[2] + calculated_ao[0])
                         {
