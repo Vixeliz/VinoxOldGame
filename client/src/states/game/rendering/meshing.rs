@@ -187,10 +187,6 @@ impl<'a> Face<'a> {
         }
     }
 
-    pub fn ao(&self) -> [u8; 4] {
-        [0; 4]
-    }
-
     pub fn voxel(&self) -> [usize; 3] {
         self.quad.voxel
     }
@@ -218,6 +214,7 @@ pub struct MeshChunkEvent {
 //     pub ao: Vec<u8>,
 // }
 
+// TODO: Fix the one quad not being flipped
 pub fn calculate_ao<C, T>(
     chunk: &C,
     current_side: Side,
