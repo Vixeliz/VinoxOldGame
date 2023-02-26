@@ -21,8 +21,8 @@ use crate::{
 pub fn setup(mut commands: Commands) {
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            color: Color::WHITE,
-            illuminance: 1500.0,
+            color: Color::rgb_u8(178, 255, 238),
+            illuminance: 2500.0,
             shadows_enabled: true,
             ..default()
         },
@@ -31,8 +31,8 @@ pub fn setup(mut commands: Commands) {
         ..default()
     });
     commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.75,
+        color: Color::rgb_u8(255, 251, 233),
+        brightness: 1.0,
     });
 }
 
