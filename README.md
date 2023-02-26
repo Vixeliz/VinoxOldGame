@@ -1,4 +1,7 @@
 # Vinox
+
+## HEAVILY IN DEVELOPMENT STILL NOTHING HERE IS FINAL AND THE CODE NEEDS REFACTORING
+
 Sandbox survival game made with Rust and bevy.
 The goal of this project is somewhat like minetest but a much more limited scripting system at first with the upside of a more comprehensive base game and
 more modern engine technology.
