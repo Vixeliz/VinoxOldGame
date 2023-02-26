@@ -9,7 +9,7 @@ use strum_macros::EnumString;
 use crate::game::storage::{BlockType, EntityType};
 
 pub const CHUNK_SIZE: u32 = 32;
-pub const CHUNK_SIZE_PADDED: u32 = CHUNK_SIZE + 1;
+pub const CHUNK_SIZE_PADDED: u32 = CHUNK_SIZE + 2;
 pub const TOTAL_CHUNK_SIZE: u32 = CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED;
 
 #[derive(Resource, Default, Clone)]
@@ -218,7 +218,6 @@ impl RawChunk {
     pub fn add_block_state(&mut self, block_data: &String) {
         let old_vec = self.palette.clone();
         if let Some(id) = self.get_index_for_state(block_data) {
-            warn!("Block data: {}, already exist!", block_data);
         } else {
             self.palette.push(block_data.to_owned());
             self.update_chunk_pal(&old_vec);
@@ -239,11 +238,11 @@ impl RawChunk {
     // This actual chunks data starts at 1,1,1 and ends at chunk_size - 1
     pub fn set_block(&mut self, pos: UVec3, block_data: String) {
         if pos.x > 0
-            && pos.x < (CHUNK_SIZE) as u32
+            && pos.x < (CHUNK_SIZE_PADDED - 1) as u32
             && pos.y > 0
-            && pos.y < (CHUNK_SIZE) as u32
+            && pos.y < (CHUNK_SIZE_PADDED - 1) as u32
             && pos.z > 0
-            && pos.z < (CHUNK_SIZE) as u32
+            && pos.z < (CHUNK_SIZE_PADDED - 1) as u32
         {
             let index = RawChunk::linearize(pos);
             if let Some(block_type) = self.get_index_for_state(&block_data) {
@@ -261,11 +260,11 @@ impl RawChunk {
     }
     pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
         if pos.x > 0
-            && pos.x < (CHUNK_SIZE) as u32
+            && pos.x < (CHUNK_SIZE_PADDED - 1) as u32
             && pos.y > 0
-            && pos.y < (CHUNK_SIZE) as u32
+            && pos.y < (CHUNK_SIZE_PADDED - 1) as u32
             && pos.z > 0
-            && pos.z < (CHUNK_SIZE) as u32
+            && pos.z < (CHUNK_SIZE_PADDED - 1) as u32
         {
             let index = RawChunk::linearize(pos);
             self.get_state_for_index(self.voxels[index] as usize)

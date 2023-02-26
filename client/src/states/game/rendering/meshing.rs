@@ -496,9 +496,9 @@ pub fn process_task(
                         ..default()
                     }),
                     transform: Transform::from_translation(Vec3::new(
-                        (chunk.pos[0] * (CHUNK_SIZE - 2) as i32) as f32,
-                        (chunk.pos[1] * (CHUNK_SIZE - 2) as i32) as f32,
-                        (chunk.pos[2] * (CHUNK_SIZE - 2) as i32) as f32,
+                        (chunk.pos[0] * (CHUNK_SIZE - 1) as i32) as f32,
+                        (chunk.pos[1] * (CHUNK_SIZE - 1) as i32) as f32,
+                        (chunk.pos[2] * (CHUNK_SIZE - 1) as i32) as f32,
                     )),
                     ..Default::default()
                 },

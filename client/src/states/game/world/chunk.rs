@@ -86,9 +86,9 @@ fn is_in_radius(pos: IVec3, min_bound: IVec3, max_bound: IVec3) -> Option<bool> 
 
 pub fn world_to_chunk(pos: Vec3) -> IVec3 {
     IVec3::new(
-        (pos.x / CHUNK_SIZE as f32).round() as i32,
-        (pos.y / CHUNK_SIZE as f32).round() as i32,
-        (pos.z / CHUNK_SIZE as f32).round() as i32,
+        (pos.x / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
+        (pos.y / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
+        (pos.z / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
     )
 }
 

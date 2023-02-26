@@ -72,7 +72,7 @@ pub struct SimulationDistance {
     pub height: i32,
 }
 
-#[derive(Default, Resource)]
+#[derive(Default, Resource, Debug)]
 pub struct ChunkQueue {
     pub create: HashSet<IVec3>,
     pub remove: HashSet<IVec3>,
@@ -130,9 +130,9 @@ impl<'w, 's> ChunkManager<'w, 's> {
 
     pub fn world_to_chunk(&self, pos: Vec3) -> IVec3 {
         IVec3::new(
-            (pos.x / CHUNK_SIZE as f32).round() as i32,
-            (pos.y / CHUNK_SIZE as f32).round() as i32,
-            (pos.z / CHUNK_SIZE as f32).round() as i32,
+            (pos.x / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
+            (pos.y / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
+            (pos.z / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
         )
     }
 
@@ -220,6 +220,7 @@ pub fn process_queue(
     mut current_chunks: ResMut<CurrentChunks>,
 ) {
     let task_pool = AsyncComputeTaskPool::get();
+    // println!("{:?}", chunk_queue);
     chunk_queue
         .create
         .iter()
@@ -262,7 +263,7 @@ impl Plugin for ChunkGenerationPlugin {
                 height: 4,
                 depth: 4,
             })
-            .add_system(process_queue)
+            .add_system_to_stage(CoreStage::PostUpdate, process_queue)
             .add_system(generate_chunks_world)
             .add_system_to_stage(CoreStage::PostUpdate, clear_unloaded_chunks)
             .add_system(process_task);
