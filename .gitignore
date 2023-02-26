@@ -1,3 +1,5 @@
 /target
 run.sh
 .DS_Store
+*.DS_Store
+*.tracy
