@@ -10,7 +10,7 @@ use common::game::world::chunk::{
 use futures_lite::future;
 
 use crate::states::{
-    game::world::chunk::{ChunkQueue, CurrentChunks, RenderedChunk},
+    game::world::chunk::{ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance},
     loading::LoadableAssets,
 };
 
@@ -429,23 +429,24 @@ where
 }
 
 pub fn build_mesh(
-    mut commands: Commands,
     mut event: EventReader<MeshChunkEvent>,
-    mut loadable_assets: ResMut<LoadableAssets>,
-    loadable_types: Res<LoadableTypes>,
-    texture_atlas: Res<Assets<TextureAtlas>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut current_chunks: ResMut<CurrentChunks>,
     mut chunk_queue: ResMut<ChunkQueue>,
+    player_chunk: Res<PlayerChunk>,
+    view_distance: Res<ViewDistance>,
 ) {
     // let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     // 0 and CHUNK_SIZE_PADDED dont get built into the mesh itself its data for meshing from other chunks this is just one solution
     // TODO: Redo a lot of this code but for now just want a working implementation. The ao and custom geometry are the things I think need the most looking at
     for evt in event.iter() {
-        chunk_queue
-            .mesh
-            .push((evt.pos.into(), evt.raw_chunk.clone()));
+        if player_chunk.is_in_radius(
+            evt.pos,
+            IVec2::new(-view_distance.horizontal, -view_distance.vertical),
+            IVec2::new(view_distance.horizontal, view_distance.vertical),
+        ) {
+            chunk_queue
+                .mesh
+                .push((evt.pos.into(), evt.raw_chunk.clone()));
+        }
     }
 }
 
@@ -507,6 +508,7 @@ pub fn process_task(
 
             commands.entity(entity).insert(chunk);
             commands.entity(entity).remove::<ChunkGenTask>();
+            commands.entity(entity).remove::<MeshedChunk>();
         }
     }
 }
@@ -531,8 +533,7 @@ pub fn process_queue(
         .clone();
     chunk_queue
         .mesh
-        .iter()
-        .cloned()
+        .drain(..)
         .map(|(chunk_pos, raw_chunk)| {
             let cloned_types: LoadableTypes = loadable_types.clone();
             let cloned_assets: LoadableAssets = loadable_assets.clone();
@@ -616,7 +617,6 @@ pub fn process_queue(
             let chunk_id = commands.spawn(chunk).id();
             current_chunks.insert_entity(chunk_pos, chunk_id);
         });
-    chunk_queue.mesh.clear();
 }
 
 pub fn calculate_coords(index: usize, tile_size: Vec2, tilesheet_size: Vec2) -> [[f32; 2]; 4] {

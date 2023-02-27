@@ -2,9 +2,10 @@ use crate::networking::syncing::SentChunks;
 
 use super::generation::generate_chunk;
 use bevy::{
-    ecs::system::SystemParam,
+    ecs::{schedule::ShouldRun, system::SystemParam},
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
+    utils::FloatOrd,
 };
 use bimap::BiMap;
 use common::{
@@ -14,7 +15,7 @@ use common::{
 use futures_lite::future;
 use std::collections::*;
 
-#[derive(Resource, Default)]
+#[derive(Resource, Default, Debug)]
 pub struct CurrentChunks {
     pub chunks: HashMap<IVec3, Entity>,
 }
@@ -60,9 +61,8 @@ impl DirtyChunks {
 
 #[derive(Default, Resource)]
 pub struct ViewDistance {
-    pub width: i32,
-    pub depth: i32,
-    pub height: i32,
+    pub vertical: i32,
+    pub horizontal: i32,
 }
 
 #[derive(Default, Resource)]
@@ -74,20 +74,20 @@ pub struct SimulationDistance {
 
 #[derive(Default, Resource, Debug)]
 pub struct ChunkQueue {
-    pub create: HashSet<IVec3>,
-    pub remove: HashSet<IVec3>,
+    pub create: Vec<IVec3>,
+    pub remove: Vec<IVec3>,
 }
 
 impl CurrentLoadPoints {
-    fn is_in_radius(&self, pos: IVec3, min_bound: IVec3, max_bound: IVec3) -> Option<bool> {
+    fn is_in_radius(&self, pos: IVec3, min_bound: IVec2, max_bound: IVec2) -> Option<bool> {
         for point in self.points.left_values() {
-            if (pos.x <= (max_bound.x + point.x) && pos.x >= (min_bound.x + point.x))
-                && (pos.y <= (max_bound.y + point.y) && pos.y >= (min_bound.y + point.y))
-                && (pos.z <= (max_bound.z + point.z) && pos.z >= (min_bound.z + point.z))
+            if (pos.x > (max_bound.x + point.x) || pos.x < (min_bound.x + point.x))
+                || (pos.y > (max_bound.y + point.y) || pos.y < (min_bound.y + point.y))
+                || (pos.z > (max_bound.x + point.z) || pos.z < (min_bound.x + point.z))
             {
-                return Some(true);
-            } else {
                 return Some(false);
+            } else {
+                return Some(true);
             }
         }
         None
@@ -106,13 +106,13 @@ pub struct ChunkManager<'w, 's> {
 
 impl<'w, 's> ChunkManager<'w, 's> {
     pub fn add_chunk_to_queue(&mut self, pos: IVec3) {
-        self.chunk_queue.create.insert(pos);
+        self.chunk_queue.create.push(pos);
     }
     pub fn get_chunks_around_chunk(&mut self, pos: IVec3) -> Vec<&ChunkComp> {
         let mut res = Vec::new();
-        for x in -self.view_distance.width / 2..self.view_distance.width / 2 {
-            for y in -self.view_distance.height / 2..self.view_distance.height / 2 {
-                for z in -self.view_distance.depth / 2..self.view_distance.depth / 2 {
+        for x in -self.view_distance.horizontal..self.view_distance.horizontal {
+            for y in -self.view_distance.vertical..self.view_distance.vertical {
+                for z in -self.view_distance.horizontal..self.view_distance.horizontal {
                     if let Some(entity) =
                         self.current_chunks
                             .get_entity(IVec3::new(pos.x + x, pos.y + y, pos.z + z))
@@ -137,7 +137,17 @@ impl<'w, 's> ChunkManager<'w, 's> {
     }
 
     pub fn add_point(&mut self, pos: IVec3, owner: u64) {
-        self.current_load_points.points.insert(pos, owner);
+        if !self.current_load_points.points.contains_left(&pos) {
+            self.current_load_points.points.insert(pos, owner);
+        }
+    }
+}
+
+pub fn should_update_chunks(current_load_points: Res<CurrentLoadPoints>) -> ShouldRun {
+    if current_load_points.is_changed() {
+        ShouldRun::Yes
+    } else {
+        ShouldRun::No
     }
 }
 
@@ -148,55 +158,49 @@ pub fn generate_chunks_world(
     current_chunks: ResMut<CurrentChunks>,
 ) {
     for point in current_load_points.points.left_values() {
-        for x in -view_distance.width / 2..view_distance.width / 2 {
-            for y in -view_distance.height / 2..view_distance.height / 2 {
-                for z in -view_distance.depth / 2..view_distance.depth / 2 {
-                    let pos = IVec3::new(point.x + x, point.y + y, point.z + z);
-                    if current_chunks.get_entity(pos).is_some() {
-                        break;
+        for x in -view_distance.horizontal..view_distance.horizontal {
+            for y in -view_distance.vertical..view_distance.vertical {
+                for z in -view_distance.horizontal..view_distance.horizontal {
+                    let pos = IVec3::new(x - point.x, y - point.y, z - point.z);
+                    if current_chunks.get_entity(pos).is_none() {
+                        chunk_queue.create.push(pos);
                     }
-                    chunk_queue.create.insert(pos);
                 }
             }
         }
+        chunk_queue
+            .create
+            .sort_unstable_by_key(|key| FloatOrd(key.as_vec3().distance(point.as_vec3())));
+    }
+}
+
+pub fn destroy_chunks(
+    mut commands: Commands,
+    mut chunk_queue: ResMut<ChunkQueue>,
+    mut current_chunks: ResMut<CurrentChunks>,
+) {
+    for chunk in chunk_queue.remove.drain(..) {
+        commands
+            .entity(current_chunks.remove_entity(chunk).unwrap())
+            .despawn_recursive();
     }
 }
 
 pub fn clear_unloaded_chunks(
-    mut commands: Commands,
     mut current_chunks: ResMut<CurrentChunks>,
     current_load_points: Res<CurrentLoadPoints>,
     view_distance: Res<ViewDistance>,
-    mut player_query: Query<&mut SentChunks, With<Player>>,
+    mut chunk_queue: ResMut<ChunkQueue>,
 ) {
-    let mut changed_chunks = Vec::new();
     for chunk_pos in current_chunks.chunks.keys() {
         if let Some(loaded) = current_load_points.is_in_radius(
             *chunk_pos,
-            IVec3::new(
-                -view_distance.width / 2,
-                -view_distance.height / 2,
-                -view_distance.depth / 2,
-            ),
-            IVec3::new(
-                view_distance.width / 2,
-                view_distance.height / 2,
-                view_distance.depth / 2,
-            ),
+            IVec2::new(-view_distance.horizontal, -view_distance.vertical),
+            IVec2::new(view_distance.horizontal, view_distance.vertical),
         ) {
             if !loaded {
-                commands
-                    .get_entity(current_chunks.get_entity(*chunk_pos).unwrap())
-                    .unwrap()
-                    .despawn_recursive();
-                changed_chunks.push(chunk_pos.clone());
+                chunk_queue.remove.push(*chunk_pos);
             }
-        }
-    }
-    for chunk_pos in changed_chunks {
-        current_chunks.remove_entity(chunk_pos);
-        for mut sent_chunks in player_query.iter_mut() {
-            sent_chunks.chunks.remove(&chunk_pos);
         }
     }
 }
@@ -213,18 +217,15 @@ pub fn process_task(mut commands: Commands, mut chunk_query: Query<(Entity, &mut
     }
 }
 
-// TODO: Check if a chunk already exist
 pub fn process_queue(
     mut commands: Commands,
     mut chunk_queue: ResMut<ChunkQueue>,
     mut current_chunks: ResMut<CurrentChunks>,
 ) {
     let task_pool = AsyncComputeTaskPool::get();
-    // println!("{:?}", chunk_queue);
     chunk_queue
         .create
-        .iter()
-        .cloned()
+        .drain(..)
         .map(|chunk_pos| {
             (
                 chunk_pos,
@@ -243,7 +244,19 @@ pub fn process_queue(
             let chunk_id = commands.spawn(chunk).id();
             current_chunks.insert_entity(chunk_pos, chunk_id);
         });
-    chunk_queue.create.clear();
+}
+
+/// Label for the stage housing the chunk loading systems.
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, StageLabel)]
+pub struct ChunkLoadingStage;
+
+#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, SystemLabel)]
+
+pub enum ChunkLoadingSystem {
+    /// Runs chunk view distance calculations and queue events for chunk creations and deletions.
+    UpdateChunks,
+    /// Creates the voxel buffers to hold chunk data and attach them a chunk entity in the ECS world.
+    CreateChunks,
 }
 
 pub struct ChunkGenerationPlugin;
@@ -254,18 +267,35 @@ impl Plugin for ChunkGenerationPlugin {
             .insert_resource(ChunkQueue::default())
             .insert_resource(CurrentLoadPoints::default())
             .insert_resource(ViewDistance {
-                width: 8,
-                height: 6,
-                depth: 8,
+                vertical: 6,
+                horizontal: 8,
             })
             .insert_resource(SimulationDistance {
                 width: 4,
                 height: 4,
                 depth: 4,
             })
-            .add_system_to_stage(CoreStage::PostUpdate, process_queue)
-            .add_system(generate_chunks_world)
-            .add_system_to_stage(CoreStage::PostUpdate, clear_unloaded_chunks)
+            .add_stage_after(
+                CoreStage::Update,
+                ChunkLoadingStage,
+                SystemStage::parallel()
+                    .with_system(
+                        clear_unloaded_chunks
+                            .label(ChunkLoadingSystem::UpdateChunks)
+                            .with_run_criteria(should_update_chunks),
+                    )
+                    .with_system(
+                        generate_chunks_world
+                            .label(ChunkLoadingSystem::UpdateChunks)
+                            .with_run_criteria(should_update_chunks),
+                    )
+                    .with_system(
+                        process_queue
+                            .label(ChunkLoadingSystem::CreateChunks)
+                            .after(ChunkLoadingSystem::UpdateChunks),
+                    ),
+            )
+            .add_system_to_stage(CoreStage::Last, destroy_chunks)
             .add_system(process_task);
     }
 }
