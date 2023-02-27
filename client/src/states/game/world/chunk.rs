@@ -17,7 +17,6 @@ use crate::{
 
 #[derive(Bundle)]
 pub struct RenderedChunk {
-    pub chunk: ChunkComp,
     #[bundle]
     pub mesh: PbrBundle,
     pub collider: Collider,
@@ -170,113 +169,123 @@ pub fn clear_unloaded_chunks(
 // This runs first then we remesh
 pub fn update_borders(
     mut current_chunks: ResMut<CurrentChunks>,
-    mut chunks: Query<&mut ChunkComp, Without<MeshedChunk>>,
+    mut chunks: Query<&mut ChunkComp>,
     mut dirty_chunks: ResMut<DirtyChunks>,
     mut chunk_queue: ResMut<ChunkQueue>,
+    mut mesh_event: EventWriter<MeshChunkEvent>,
 ) {
-    for chunk_pos in dirty_chunks.chunks.iter() {
-        let chunk_entity = current_chunks.get_entity(*chunk_pos).unwrap();
-        if let Ok(mut chunk_data) = chunks.get_mut(chunk_entity) {
-            let mut chunk_data = chunk_data.chunk_data.clone();
-            // TODO: Try to figure out a better way to do this
-            for i in 0..5 {
-                match i {
-                    0 => {
-                        let chunk_pos = *chunk_pos + IVec3::new(0, -1, 0);
-                        if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                            let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                            for x in 1..CHUNK_SIZE {
+    let cloned_chunks = dirty_chunks.chunks.clone();
+    for chunk_pos in cloned_chunks.iter().cloned() {
+        if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos) {
+            if let Ok(mut chunk_data) = chunks.get_mut(chunk_entity) {
+                let mut chunk_data = chunk_data.chunk_data.clone();
+                // TODO: Try to figure out a better way to do this
+                for i in 0..5 {
+                    match i {
+                        0 => {
+                            let chunk_pos = chunk_pos + IVec3::new(0, -1, 0);
+                            if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
+                                for x in 1..CHUNK_SIZE {
+                                    for z in 1..CHUNK_SIZE {
+                                        let vox = neighbor
+                                            .get_block(UVec3::new(x, CHUNK_SIZE, z))
+                                            .unwrap();
+                                        chunk_data.add_block_state(&vox);
+                                        chunk_data.set_block(UVec3::new(x, 0, z), vox);
+                                    }
+                                }
+                            }
+                        }
+                        1 => {
+                            let chunk_pos = chunk_pos + IVec3::new(0, 1, 0);
+                            if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
+                                for x in 1..CHUNK_SIZE {
+                                    for z in 1..CHUNK_SIZE {
+                                        let vox = neighbor.get_block(UVec3::new(x, 1, z)).unwrap();
+                                        chunk_data.add_block_state(&vox);
+                                        chunk_data.set_block(
+                                            UVec3::new(x, CHUNK_SIZE_PADDED - 1, z),
+                                            vox,
+                                        );
+                                    }
+                                }
+                            }
+                        }
+                        2 => {
+                            let chunk_pos = chunk_pos + IVec3::new(-1, 0, 0);
+                            if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
                                 for z in 1..CHUNK_SIZE {
-                                    let vox =
-                                        neighbor.get_block(UVec3::new(x, CHUNK_SIZE, z)).unwrap();
-                                    chunk_data.add_block_state(&vox);
-                                    chunk_data.set_block(UVec3::new(x, 0, z), vox);
+                                    for y in 1..CHUNK_SIZE {
+                                        let vox = neighbor
+                                            .get_block(UVec3::new(CHUNK_SIZE, y, z))
+                                            .unwrap();
+                                        chunk_data.add_block_state(&vox);
+                                        chunk_data.set_block(UVec3::new(0, y, z), vox);
+                                    }
                                 }
                             }
                         }
-                    }
-                    1 => {
-                        let chunk_pos = *chunk_pos + IVec3::new(0, 1, 0);
-                        if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                            let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                            for x in 1..CHUNK_SIZE {
+                        3 => {
+                            let chunk_pos = chunk_pos + IVec3::new(1, 0, 0);
+                            if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
                                 for z in 1..CHUNK_SIZE {
-                                    let vox = neighbor.get_block(UVec3::new(x, 1, z)).unwrap();
-                                    chunk_data.add_block_state(&vox);
-                                    chunk_data
-                                        .set_block(UVec3::new(x, CHUNK_SIZE_PADDED - 1, z), vox);
+                                    for y in 1..CHUNK_SIZE {
+                                        let vox = neighbor.get_block(UVec3::new(0, y, z)).unwrap();
+                                        chunk_data.add_block_state(&vox);
+                                        chunk_data.set_block(
+                                            UVec3::new(CHUNK_SIZE_PADDED - 1, y, z),
+                                            vox,
+                                        );
+                                    }
                                 }
                             }
                         }
-                    }
-                    2 => {
-                        let chunk_pos = *chunk_pos + IVec3::new(-1, 0, 0);
-                        if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                            let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                            for z in 1..CHUNK_SIZE {
-                                for y in 1..CHUNK_SIZE {
-                                    let vox =
-                                        neighbor.get_block(UVec3::new(CHUNK_SIZE, y, z)).unwrap();
-                                    chunk_data.add_block_state(&vox);
-                                    chunk_data.set_block(UVec3::new(0, y, z), vox);
+                        4 => {
+                            let chunk_pos = chunk_pos + IVec3::new(0, 0, -1);
+                            if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
+                                for x in 1..CHUNK_SIZE {
+                                    for y in 1..CHUNK_SIZE {
+                                        let vox = neighbor
+                                            .get_block(UVec3::new(x, y, CHUNK_SIZE))
+                                            .unwrap();
+                                        chunk_data.add_block_state(&vox);
+                                        chunk_data.set_block(UVec3::new(x, y, 0), vox);
+                                    }
                                 }
                             }
                         }
-                    }
-                    3 => {
-                        let chunk_pos = *chunk_pos + IVec3::new(1, 0, 0);
-                        if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                            let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                            for z in 1..CHUNK_SIZE {
-                                for y in 1..CHUNK_SIZE {
-                                    let vox = neighbor.get_block(UVec3::new(0, y, z)).unwrap();
-                                    chunk_data.add_block_state(&vox);
-                                    chunk_data
-                                        .set_block(UVec3::new(CHUNK_SIZE_PADDED - 1, y, z), vox);
-                                }
-                            }
-                        }
-                    }
-                    4 => {
-                        let chunk_pos = *chunk_pos + IVec3::new(0, 0, -1);
-                        if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                            let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                            for x in 1..CHUNK_SIZE {
-                                for y in 1..CHUNK_SIZE {
-                                    let vox =
-                                        neighbor.get_block(UVec3::new(x, y, CHUNK_SIZE)).unwrap();
-                                    chunk_data.add_block_state(&vox);
-                                    chunk_data.set_block(UVec3::new(x, y, 0), vox);
-                                }
-                            }
-                        }
-                    }
-                    _ => {
-                        let chunk_pos = *chunk_pos + IVec3::new(0, 0, 1);
-                        if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                            let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                            for x in 1..CHUNK_SIZE {
-                                for y in 1..CHUNK_SIZE {
-                                    let vox = neighbor.get_block(UVec3::new(x, y, 0)).unwrap();
-                                    chunk_data.add_block_state(&vox);
-                                    chunk_data
-                                        .set_block(UVec3::new(x, y, CHUNK_SIZE_PADDED - 1), vox);
+                        _ => {
+                            let chunk_pos = chunk_pos + IVec3::new(0, 0, 1);
+                            if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
+                                for x in 1..CHUNK_SIZE {
+                                    for y in 1..CHUNK_SIZE {
+                                        let vox = neighbor.get_block(UVec3::new(x, y, 0)).unwrap();
+                                        chunk_data.add_block_state(&vox);
+                                        chunk_data.set_block(
+                                            UVec3::new(x, y, CHUNK_SIZE_PADDED - 1),
+                                            vox,
+                                        );
+                                    }
                                 }
                             }
                         }
                     }
                 }
+                let mut chunk = chunks.get_mut(chunk_entity).unwrap();
+                chunk.chunk_data.voxels = chunk_data.voxels;
+                chunk.chunk_data.palette = chunk_data.palette;
+                mesh_event.send(MeshChunkEvent {
+                    raw_chunk: chunk.chunk_data.clone(),
+                    pos: chunk_pos,
+                });
+                dirty_chunks.chunks.remove(&chunk_pos);
             }
-            let mut chunk = &mut chunks.get_mut(chunk_entity).unwrap().chunk_data;
-            chunk.voxels = chunk_data.voxels;
-            chunk.palette = chunk_data.palette;
-            // chunk_queue.mesh.push((
-            //     *chunk_pos,
-            //     RawChunk {
-            //         voxels: chunk.voxels,
-            //         palette: chunk.palette.clone(),
-            //     },
-            // ));
         }
     }
 }
@@ -286,21 +295,36 @@ pub fn receive_chunks(
     mut commands: Commands,
     mut event: EventReader<CreateChunkEvent>,
     mut mesh_event: EventWriter<MeshChunkEvent>,
+    mut dirty_chunks: ResMut<DirtyChunks>,
+    player_chunk: Res<PlayerChunk>,
+    view_distance: Res<ViewDistance>,
 ) {
     for evt in event.iter() {
-        let chunk_id = commands
-            .spawn(ChunkComp {
+        if player_chunk.is_in_radius(
+            evt.pos,
+            IVec2::new(-view_distance.horizontal, -view_distance.vertical),
+            IVec2::new(view_distance.horizontal, view_distance.vertical),
+        ) {
+            let chunk_id = commands
+                .spawn(ChunkComp {
+                    pos: evt.pos,
+                    chunk_data: evt.raw_chunk.clone(),
+                    saved_entities: Vec::new(),
+                    entities: Vec::new(),
+                })
+                .id();
+            current_chunks.insert_entity(evt.pos, chunk_id);
+            mesh_event.send(MeshChunkEvent {
+                raw_chunk: evt.raw_chunk.clone(),
                 pos: evt.pos,
-                chunk_data: evt.raw_chunk.clone(),
-                saved_entities: Vec::new(),
-                entities: Vec::new(),
-            })
-            .id();
-        current_chunks.insert_entity(evt.pos, chunk_id);
-        mesh_event.send(MeshChunkEvent {
-            raw_chunk: evt.raw_chunk.clone(),
-            pos: evt.pos,
-        });
+            });
+            if current_chunks
+                .get_entity(evt.pos - IVec3::new(-1, 0, 0))
+                .is_some()
+            {
+                dirty_chunks.mark_dirty(evt.pos - IVec3::new(-1, 0, 0));
+            }
+        }
     }
 }
 
@@ -345,8 +369,7 @@ impl Plugin for ChunkHandling {
                     .with_system(
                         receive_chunks
                             .label(ChunkLoadingSystem::ReceiveChunks)
-                            .after(ChunkLoadingSystem::UpdatePlayer)
-                            .with_run_criteria(should_update_chunks),
+                            .after(ChunkLoadingSystem::DirtyChunks),
                     )
                     .with_system(
                         clear_unloaded_chunks
@@ -357,12 +380,12 @@ impl Plugin for ChunkHandling {
                     .with_system(
                         update_borders
                             .label(ChunkLoadingSystem::DirtyChunks)
-                            .after(ChunkLoadingSystem::UpdateChunks),
+                            .after(ChunkLoadingSystem::UpdatePlayer),
                     )
                     .with_system(
                         build_mesh
                             .label(ChunkLoadingSystem::CreateChunks)
-                            .after(ChunkLoadingSystem::DirtyChunks),
+                            .after(ChunkLoadingSystem::UpdateChunks),
                     ),
             )
             .add_system_to_stage(CoreStage::Last, delete_chunks)

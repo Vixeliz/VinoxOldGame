@@ -447,7 +447,6 @@ pub fn build_mesh(
 #[derive(Component)]
 pub struct MeshedChunk {
     chunk_mesh: Mesh,
-    raw_chunk: RawChunk,
     collider: Collider,
     pos: IVec3,
 }
@@ -463,7 +462,6 @@ pub fn process_task(
     texture_atlas: Res<Assets<TextureAtlas>>,
     mut loadable_assets: ResMut<LoadableAssets>,
     mut current_chunks: ResMut<CurrentChunks>,
-    mut dirty_chunks: ResMut<DirtyChunks>,
 ) {
     let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     for (entity, mut chunk_task) in &mut chunk_query {
@@ -471,12 +469,6 @@ pub fn process_task(
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
                 commands.entity(chunk_entity).insert(RenderedChunk {
                     collider: chunk.collider.clone(),
-                    chunk: ChunkComp {
-                        chunk_data: chunk.raw_chunk.clone(),
-                        pos: chunk.pos.into(),
-                        entities: Vec::new(),
-                        saved_entities: Vec::new(),
-                    },
                     mesh: PbrBundle {
                         mesh: meshes.add(chunk.chunk_mesh.clone()),
                         material: materials.add(StandardMaterial {
@@ -502,10 +494,9 @@ pub fn process_task(
                 });
 
                 commands.entity(entity).despawn_recursive();
+            } else {
+                commands.entity(entity).despawn_recursive();
             }
-            // commands.entity(entity).insert(chunk);
-            // commands.entity(entity).remove::<ChunkGenTask>();
-            // commands.entity(entity).remove::<MeshedChunk>();
         }
     }
 }
@@ -513,7 +504,6 @@ pub fn process_task(
 pub fn process_queue(
     mut chunk_queue: ResMut<ChunkQueue>,
     mut commands: Commands,
-    mut event: EventReader<MeshChunkEvent>,
     mut loadable_assets: ResMut<LoadableAssets>,
     loadable_types: Res<LoadableTypes>,
     texture_atlas: Res<Assets<TextureAtlas>>,
@@ -590,18 +580,18 @@ pub fn process_queue(
                         uvs.push(face_coords[2]);
                         uvs.push(face_coords[3]);
                     }
-                    let col_vertices = positions
-                        .iter()
-                        .cloned()
-                        .map(Vec3::from_array)
-                        .collect::<Vec<_>>();
+                    // let col_vertices = positions
+                    //     .iter()
+                    //     .cloned()
+                    //     .map(Vec3::from_array)
+                    //     .collect::<Vec<_>>();
 
-                    let col_indices = indices
-                        .iter()
-                        .cloned()
-                        .tuples::<(u32, u32, u32)>()
-                        .map(|(x, y, z)| [x, y, z])
-                        .collect::<Vec<_>>();
+                    // let col_indices = indices
+                    //     .iter()
+                    //     .cloned()
+                    //     .tuples::<(u32, u32, u32)>()
+                    //     .map(|(x, y, z)| [x, y, z])
+                    //     .collect::<Vec<_>>();
 
                     let final_ao = ao_convert(ao);
                     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -620,7 +610,6 @@ pub fn process_queue(
 
                     MeshedChunk {
                         chunk_mesh: mesh,
-                        raw_chunk: raw_chunk.clone(),
                         pos: chunk_pos,
                         collider,
                     }
