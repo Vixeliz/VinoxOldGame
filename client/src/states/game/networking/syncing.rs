@@ -30,7 +30,7 @@ use crate::{
             input::CameraController,
             networking::components::ControlledPlayer,
             rendering::meshing::{build_mesh, MeshChunkEvent},
-            world::chunk::RenderedChunk,
+            world::chunk::{CreateChunkEvent, RenderedChunk},
         },
         loading::LoadableAssets,
     },
@@ -50,7 +50,7 @@ pub fn client_sync_players(
     player_builder: Res<PlayerBundleBuilder>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    mut chunk_mesh_event: EventWriter<MeshChunkEvent>,
+    mut chunk_event: EventWriter<CreateChunkEvent>,
 ) {
     let client_id = client.client_id();
     while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
@@ -129,7 +129,7 @@ pub fn client_sync_players(
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
                 // println!("Recieved chunk {pos:?}");
-                chunk_mesh_event.send(MeshChunkEvent {
+                chunk_event.send(CreateChunkEvent {
                     raw_chunk: chunk_data,
                     pos: pos.into(),
                 });
@@ -144,7 +144,7 @@ pub fn client_sync_players(
         match level_data {
             LevelData::ChunkCreate { chunk_data, pos } => {
                 // println!("Recieved chunk {pos:?}");
-                chunk_mesh_event.send(MeshChunkEvent {
+                chunk_event.send(CreateChunkEvent {
                     raw_chunk: chunk_data,
                     pos: pos.into(),
                 });

@@ -11,7 +11,9 @@ use futures_lite::future;
 use itertools::Itertools;
 
 use crate::states::{
-    game::world::chunk::{ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance},
+    game::world::chunk::{
+        ChunkQueue, CurrentChunks, DirtyChunks, PlayerChunk, RenderedChunk, ViewDistance,
+    },
     loading::LoadableAssets,
 };
 
@@ -191,15 +193,6 @@ impl<'a> Face<'a> {
     pub fn voxel(&self) -> [usize; 3] {
         self.quad.voxel
     }
-}
-
-pub struct CreateChunkEvent {
-    pub pos: IVec3,
-    pub raw_chunk: RawChunk,
-}
-
-pub struct UpdateChunkEvent {
-    pub pos: IVec3,
 }
 
 pub struct MeshChunkEvent {
@@ -452,7 +445,7 @@ pub fn build_mesh(
 }
 
 #[derive(Component)]
-struct MeshedChunk {
+pub struct MeshedChunk {
     chunk_mesh: Mesh,
     raw_chunk: RawChunk,
     collider: Collider,
@@ -469,46 +462,50 @@ pub fn process_task(
     mut materials: ResMut<Assets<StandardMaterial>>,
     texture_atlas: Res<Assets<TextureAtlas>>,
     mut loadable_assets: ResMut<LoadableAssets>,
+    mut current_chunks: ResMut<CurrentChunks>,
+    mut dirty_chunks: ResMut<DirtyChunks>,
 ) {
     let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
-            commands.entity(entity).insert(RenderedChunk {
-                collider: chunk.collider.clone(),
-                chunk: ChunkComp {
-                    chunk_data: chunk.raw_chunk.clone(),
-                    pos: chunk.pos.into(),
-                    dirty: true,
-                    entities: Vec::new(),
-                    saved_entities: Vec::new(),
-                },
-                mesh: PbrBundle {
-                    mesh: meshes.add(chunk.chunk_mesh.clone()),
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::WHITE,
-                        base_color_texture: Some(
-                            texture_atlas
-                                .get(&loadable_assets.block_atlas)
-                                .unwrap()
-                                .texture
-                                .clone(),
-                        ),
-                        alpha_mode: AlphaMode::Mask(1.0),
-                        perceptual_roughness: 1.0,
-                        ..default()
-                    }),
-                    transform: Transform::from_translation(Vec3::new(
-                        (chunk.pos[0] * (CHUNK_SIZE - 1) as i32) as f32,
-                        (chunk.pos[1] * (CHUNK_SIZE - 1) as i32) as f32,
-                        (chunk.pos[2] * (CHUNK_SIZE - 1) as i32) as f32,
-                    )),
-                    ..Default::default()
-                },
-            });
+            if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
+                commands.entity(chunk_entity).insert(RenderedChunk {
+                    collider: chunk.collider.clone(),
+                    chunk: ChunkComp {
+                        chunk_data: chunk.raw_chunk.clone(),
+                        pos: chunk.pos.into(),
+                        entities: Vec::new(),
+                        saved_entities: Vec::new(),
+                    },
+                    mesh: PbrBundle {
+                        mesh: meshes.add(chunk.chunk_mesh.clone()),
+                        material: materials.add(StandardMaterial {
+                            base_color: Color::WHITE,
+                            base_color_texture: Some(
+                                texture_atlas
+                                    .get(&loadable_assets.block_atlas)
+                                    .unwrap()
+                                    .texture
+                                    .clone(),
+                            ),
+                            alpha_mode: AlphaMode::Mask(1.0),
+                            perceptual_roughness: 1.0,
+                            ..default()
+                        }),
+                        transform: Transform::from_translation(Vec3::new(
+                            (chunk.pos[0] * (CHUNK_SIZE - 1) as i32) as f32,
+                            (chunk.pos[1] * (CHUNK_SIZE - 1) as i32) as f32,
+                            (chunk.pos[2] * (CHUNK_SIZE - 1) as i32) as f32,
+                        )),
+                        ..Default::default()
+                    },
+                });
 
-            commands.entity(entity).insert(chunk);
-            commands.entity(entity).remove::<ChunkGenTask>();
-            commands.entity(entity).remove::<MeshedChunk>();
+                commands.entity(entity).despawn_recursive();
+            }
+            // commands.entity(entity).insert(chunk);
+            // commands.entity(entity).remove::<ChunkGenTask>();
+            // commands.entity(entity).remove::<MeshedChunk>();
         }
     }
 }
@@ -632,7 +629,7 @@ pub fn process_queue(
         })
         .for_each(|(chunk_pos, chunk)| {
             let chunk_id = commands.spawn(chunk).id();
-            current_chunks.insert_entity(chunk_pos, chunk_id);
+            // current_chunks.insert_entity(chunk_pos, chunk_id);
         });
 }
 

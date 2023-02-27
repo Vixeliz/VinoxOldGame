@@ -233,7 +233,6 @@ pub fn process_queue(
                     ChunkComp {
                         pos: chunk_pos,
                         chunk_data: generate_chunk(chunk_pos, 0),
-                        dirty: false,
                         entities: Vec::new(),
                         saved_entities: Vec::new(),
                     }

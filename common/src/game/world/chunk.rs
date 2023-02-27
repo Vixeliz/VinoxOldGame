@@ -81,7 +81,6 @@ pub struct ChunkComp {
     pub chunk_data: RawChunk,
     pub entities: Vec<Entity>,
     pub saved_entities: Vec<String>,
-    pub dirty: bool,
 }
 
 pub trait Voxel: Eq {
@@ -237,42 +236,21 @@ impl RawChunk {
     }
     // This actual chunks data starts at 1,1,1 and ends at chunk_size - 1
     pub fn set_block(&mut self, pos: UVec3, block_data: String) {
-        if pos.x > 0
-            && pos.x < (CHUNK_SIZE_PADDED - 1) as u32
-            && pos.y > 0
-            && pos.y < (CHUNK_SIZE_PADDED - 1) as u32
-            && pos.z > 0
-            && pos.z < (CHUNK_SIZE_PADDED - 1) as u32
-        {
-            let index = RawChunk::linearize(pos);
-            if let Some(block_type) = self.get_index_for_state(&block_data) {
-                if block_type == 0 {
-                    self.voxels[index] = 0;
-                } else {
-                    self.voxels[index] = block_type as u16; // Set based off of transluency
-                }
+        let index = RawChunk::linearize(pos);
+        if let Some(block_type) = self.get_index_for_state(&block_data) {
+            if block_type == 0 {
+                self.voxels[index] = 0;
             } else {
-                warn!("Voxel doesn't exist");
+                self.voxels[index] = block_type as u16; // Set based off of transluency
             }
         } else {
-            warn!("Voxel position outside of this chunks bounds");
+            warn!("Voxel doesn't exist");
         }
     }
     pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
-        if pos.x > 0
-            && pos.x < (CHUNK_SIZE_PADDED - 1) as u32
-            && pos.y > 0
-            && pos.y < (CHUNK_SIZE_PADDED - 1) as u32
-            && pos.z > 0
-            && pos.z < (CHUNK_SIZE_PADDED - 1) as u32
-        {
-            let index = RawChunk::linearize(pos);
-            self.get_state_for_index(self.voxels[index] as usize)
-                .map(|block_state| block_state)
-        } else {
-            warn!("Voxel position outside of this chunks bounds");
-            None
-        }
+        let index = RawChunk::linearize(pos);
+        self.get_state_for_index(self.voxels[index] as usize)
+            .map(|block_state| block_state)
     }
     pub fn get_visibility(&self, index: usize) -> VoxelVisibility {
         if index == 0 {
