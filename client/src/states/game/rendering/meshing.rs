@@ -8,6 +8,7 @@ use common::game::world::chunk::{
     Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
 };
 use futures_lite::future;
+use itertools::Itertools;
 
 use crate::states::{
     game::world::chunk::{ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance},
@@ -454,6 +455,7 @@ pub fn build_mesh(
 struct MeshedChunk {
     chunk_mesh: Mesh,
     raw_chunk: RawChunk,
+    collider: Collider,
     pos: IVec3,
 }
 
@@ -471,10 +473,8 @@ pub fn process_task(
     let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
-            let collider = Collider::cuboid(0.0, 0.0, 0.0);
-            // };
             commands.entity(entity).insert(RenderedChunk {
-                collider,
+                collider: chunk.collider.clone(),
                 chunk: ChunkComp {
                     chunk_data: chunk.raw_chunk.clone(),
                     pos: chunk.pos.into(),
@@ -513,7 +513,6 @@ pub fn process_task(
     }
 }
 
-// TODO: Check if a chunk already exist
 pub fn process_queue(
     mut chunk_queue: ResMut<ChunkQueue>,
     mut commands: Commands,
@@ -594,10 +593,27 @@ pub fn process_queue(
                         uvs.push(face_coords[2]);
                         uvs.push(face_coords[3]);
                     }
+                    let col_vertices = positions
+                        .iter()
+                        .cloned()
+                        .map(Vec3::from_array)
+                        .collect::<Vec<_>>();
+
+                    let col_indices = indices
+                        .iter()
+                        .cloned()
+                        .tuples::<(u32, u32, u32)>()
+                        .map(|(x, y, z)| [x, y, z])
+                        .collect::<Vec<_>>();
 
                     let final_ao = ao_convert(ao);
                     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-
+                    let collider = if !indices.is_empty() {
+                        // Collider::trimesh(col_vertices, col_indices)
+                        Collider::cuboid(0.0, 0.0, 0.0)
+                    } else {
+                        Collider::cuboid(0.0, 0.0, 0.0)
+                    };
                     mesh.set_indices(Some(Indices::U32(indices)));
 
                     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
@@ -609,6 +625,7 @@ pub fn process_queue(
                         chunk_mesh: mesh,
                         raw_chunk: raw_chunk.clone(),
                         pos: chunk_pos,
+                        collider,
                     }
                 })),
             )

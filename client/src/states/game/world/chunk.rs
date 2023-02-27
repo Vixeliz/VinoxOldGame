@@ -152,6 +152,17 @@ pub fn clear_unloaded_chunks(
     }
 }
 
+pub fn update_borders(
+    mut current_chunks: ResMut<CurrentChunks>,
+    chunks: Query<&mut ChunkComp>,
+    mut dirty_chunks: ResMut<DirtyChunks>,
+) {
+    for chunk_pos in dirty_chunks.chunks.iter() {
+        let chunk_entity = current_chunks.get_entity(*chunk_pos).unwrap();
+        // chunks.get(chunk_entity).unwrap().chunk_data.voxels
+    }
+}
+
 /// Label for the stage housing the chunk loading systems.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, StageLabel)]
 pub struct ChunkLoadingStage;

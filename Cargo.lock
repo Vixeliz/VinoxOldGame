@@ -1296,6 +1296,7 @@ dependencies = [
  "common",
  "directories",
  "futures-lite",
+ "itertools",
  "iyes_loopless",
  "mlua",
  "ron",
