@@ -542,8 +542,6 @@ pub fn process_queue(
                         //     }
                         //     // println!("face: axis {:?}:{:?}", face.side.axis, face.side.positive);
                         // }
-                        positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
-                        normals.extend_from_slice(&face.normals());
                         let calculated_ao = calculate_ao(
                             &raw_chunk,
                             face.side,
@@ -559,6 +557,8 @@ pub fn process_queue(
                         } else {
                             indices.extend_from_slice(&face.indices(positions.len() as u32, false));
                         }
+                        positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
+                        normals.extend_from_slice(&face.normals());
                         ao.extend_from_slice(&calculated_ao);
 
                         let texture_index = clone_atlas.get_texture_index(
@@ -588,29 +588,26 @@ pub fn process_queue(
                         uvs.push(face_coords[2]);
                         uvs.push(face_coords[3]);
                     }
-                    // let col_vertices = positions
-                    //     .iter()
-                    //     .cloned()
-                    //     .map(Vec3::from_array)
-                    //     .collect::<Vec<_>>();
+                    let col_vertices = positions
+                        .iter()
+                        .cloned()
+                        .map(Vec3::from_array)
+                        .collect::<Vec<_>>();
 
-                    // let col_indices = indices
-                    //     .iter()
-                    //     .cloned()
-                    //     .tuples::<(u32, u32, u32)>()
-                    //     .map(|(x, y, z)| [x, y, z])
-                    //     .collect::<Vec<_>>();
-
+                    let col_indices = indices
+                        .iter()
+                        .cloned()
+                        .tuples::<(u32, u32, u32)>()
+                        .map(|(x, y, z)| [x, y, z])
+                        .collect::<Vec<_>>();
                     let final_ao = ao_convert(ao);
                     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
                     let collider = if !indices.is_empty() {
-                        // Collider::trimesh(col_vertices, col_indices)
-                        Collider::cuboid(0.0, 0.0, 0.0)
+                        Collider::trimesh(col_vertices, col_indices)
                     } else {
                         Collider::cuboid(0.0, 0.0, 0.0)
                     };
                     mesh.set_indices(Some(Indices::U32(indices)));
-
                     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
                     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
                     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
