@@ -3,17 +3,15 @@ use bevy::{
     render::{mesh::Indices, render_resource::PrimitiveTopology},
     tasks::{AsyncComputeTaskPool, Task},
 };
-use bevy_rapier3d::prelude::{Collider};
+use bevy_rapier3d::prelude::Collider;
 use common::game::world::chunk::{
-    Chunk, LoadableTypes, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE,
+    Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE,
 };
 use futures_lite::future;
 use itertools::Itertools;
 
 use crate::states::{
-    game::world::chunk::{
-        ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance,
-    },
+    game::world::chunk::{ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance},
     loading::LoadableAssets,
 };
 
@@ -196,7 +194,6 @@ impl<'a> Face<'a> {
 }
 
 pub struct MeshChunkEvent {
-    pub raw_chunk: RawChunk, //Temporary
     pub pos: IVec3,
 }
 
@@ -426,6 +423,8 @@ pub fn build_mesh(
     mut chunk_queue: ResMut<ChunkQueue>,
     player_chunk: Res<PlayerChunk>,
     view_distance: Res<ViewDistance>,
+    chunks: Query<&ChunkComp>,
+    current_chunks: Res<CurrentChunks>,
 ) {
     // let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     // 0 and CHUNK_SIZE_PADDED dont get built into the mesh itself its data for meshing from other chunks this is just one solution
@@ -436,9 +435,14 @@ pub fn build_mesh(
             IVec2::new(-view_distance.horizontal, -view_distance.vertical),
             IVec2::new(view_distance.horizontal, view_distance.vertical),
         ) {
-            chunk_queue
-                .mesh
-                .push((evt.pos, evt.raw_chunk.clone()));
+            chunk_queue.mesh.push((
+                evt.pos,
+                chunks
+                    .get(current_chunks.get_entity(evt.pos).unwrap())
+                    .unwrap()
+                    .chunk_data
+                    .clone(),
+            ));
         }
     }
 }
