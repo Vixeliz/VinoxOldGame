@@ -10,6 +10,7 @@ use crate::game::storage::{BlockType, EntityType};
 
 pub const CHUNK_SIZE: u32 = 32;
 pub const CHUNK_SIZE_PADDED: u32 = CHUNK_SIZE + 2;
+pub const CHUNK_BOUND: u32 = CHUNK_SIZE + 1;
 pub const TOTAL_CHUNK_SIZE: u32 = CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED;
 
 #[derive(Resource, Default, Clone)]
