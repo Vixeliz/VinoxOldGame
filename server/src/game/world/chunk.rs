@@ -155,7 +155,7 @@ pub fn generate_chunks_world(
         for x in -view_distance.horizontal..view_distance.horizontal {
             for y in -view_distance.vertical..view_distance.vertical {
                 for z in -view_distance.horizontal..view_distance.horizontal {
-                    let pos = IVec3::new(x - point.x, y - point.y, z - point.z);
+                    let pos = IVec3::new(x + point.x, y + point.y, z + point.z);
                     if current_chunks.get_entity(pos).is_none() {
                         chunk_queue.create.push(pos);
                     }
