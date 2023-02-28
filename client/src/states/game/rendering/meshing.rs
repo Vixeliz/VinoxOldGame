@@ -541,7 +541,7 @@ pub fn process_queue(
                         //         println!("positions: {:?}", face.positions(1.0));
                         //     }
                         //     // println!("face: axis {:?}:{:?}", face.side.axis, face.side.positive);
-                        }
+                        // }
                         positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
                         normals.extend_from_slice(&face.normals());
                         let calculated_ao = calculate_ao(
