@@ -180,7 +180,7 @@ pub fn update_borders(
             if let Ok(mut chunk_data) = chunks.get_mut(chunk_entity) {
                 let mut chunk_data = chunk_data.chunk_data.clone();
                 // TODO: Try to figure out a better way to do this
-                for i in 0..5 {
+                for i in 0..=5 {
                     match i {
                         0 => {
                             let chunk_pos = chunk_pos + IVec3::new(0, -1, 0);
