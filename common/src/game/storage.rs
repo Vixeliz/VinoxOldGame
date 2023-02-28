@@ -84,6 +84,6 @@ pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, 
     result
 }
 
-pub fn convert_entity(entity_descriptor: Vec<EntityDescriptor>) -> HashMap<String, EntityType> {
+pub fn convert_entity(_entity_descriptor: Vec<EntityDescriptor>) -> HashMap<String, EntityType> {
     HashMap::new()
 }

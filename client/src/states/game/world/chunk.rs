@@ -2,16 +2,15 @@ use std::collections::{HashMap, HashSet};
 
 use bevy::{ecs::schedule::ShouldRun, prelude::*};
 use bevy_rapier3d::prelude::Collider;
-use bimap::BiMap;
+
 use common::game::world::chunk::{
     Chunk, ChunkComp, LoadableTypes, RawChunk, CHUNK_SIZE, CHUNK_SIZE_PADDED,
 };
 
 use crate::{
-    components::GameState,
     states::game::{
         networking::components::ControlledPlayer,
-        rendering::meshing::{build_mesh, MeshChunkEvent, MeshedChunk},
+        rendering::meshing::{build_mesh, MeshChunkEvent},
     },
 };
 
@@ -97,16 +96,10 @@ pub struct PlayerChunk {
 
 impl PlayerChunk {
     pub fn is_in_radius(&self, pos: IVec3, min_bound: IVec2, max_bound: IVec2) -> bool {
-        if (pos.x > (max_bound.x + self.chunk_pos.x) || pos.x < (min_bound.x + self.chunk_pos.x))
+        !((pos.x > (max_bound.x + self.chunk_pos.x) || pos.x < (min_bound.x + self.chunk_pos.x))
             || (pos.y > (max_bound.y + self.chunk_pos.y)
-                || pos.y < (min_bound.y + self.chunk_pos.y))
-            || (pos.z > (max_bound.x + self.chunk_pos.z)
-                || pos.z < (min_bound.x + self.chunk_pos.z))
-        {
-            return false;
-        } else {
-            return true;
-        }
+                || pos.y < (min_bound.y + self.chunk_pos.y)) || (pos.z > (max_bound.x + self.chunk_pos.z)
+                || pos.z < (min_bound.x + self.chunk_pos.z)))
     }
 }
 pub fn update_player_location(
@@ -148,8 +141,8 @@ pub fn should_update_chunks(player_chunk: Res<PlayerChunk>) -> ShouldRun {
 }
 
 pub fn clear_unloaded_chunks(
-    mut commands: Commands,
-    mut current_chunks: ResMut<CurrentChunks>,
+    _commands: Commands,
+    current_chunks: ResMut<CurrentChunks>,
     view_distance: Res<ViewDistance>,
     player_chunk: Res<PlayerChunk>,
     mut chunk_queue: ResMut<ChunkQueue>,
@@ -168,17 +161,17 @@ pub fn clear_unloaded_chunks(
 // Dirty chunks get marked in the following cases. A new neighbor spawns by them, the terrain is modified, or if a neighbor disapears
 // This runs first then we remesh
 pub fn update_borders(
-    mut current_chunks: ResMut<CurrentChunks>,
+    current_chunks: ResMut<CurrentChunks>,
     mut chunks: Query<&mut ChunkComp>,
     mut dirty_chunks: ResMut<DirtyChunks>,
-    mut chunk_queue: ResMut<ChunkQueue>,
+    _chunk_queue: ResMut<ChunkQueue>,
     mut mesh_event: EventWriter<MeshChunkEvent>,
-    loadable_types: Res<LoadableTypes>,
+    _loadable_types: Res<LoadableTypes>,
 ) {
     let cloned_chunks = dirty_chunks.chunks.clone();
     for chunk_pos in cloned_chunks.iter().cloned() {
         if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos) {
-            if let Ok(mut chunk_data) = chunks.get_mut(chunk_entity) {
+            if let Ok(chunk_data) = chunks.get_mut(chunk_entity) {
                 let mut chunk_data = chunk_data.chunk_data.clone();
                 // TODO: Try to figure out a better way to do this
                 for i in 0..=5 {
@@ -310,11 +303,11 @@ pub fn receive_chunks(
     mut current_chunks: ResMut<CurrentChunks>,
     mut commands: Commands,
     mut event: EventReader<CreateChunkEvent>,
-    mut mesh_event: EventWriter<MeshChunkEvent>,
+    _mesh_event: EventWriter<MeshChunkEvent>,
     mut dirty_chunks: ResMut<DirtyChunks>,
     player_chunk: Res<PlayerChunk>,
     view_distance: Res<ViewDistance>,
-    loadable_types: Res<LoadableTypes>,
+    _loadable_types: Res<LoadableTypes>,
 ) {
     for evt in event.iter() {
         if player_chunk.is_in_radius(

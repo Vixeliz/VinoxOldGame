@@ -3,7 +3,7 @@ use common::{
     game::{
         bundles::{AssetsLoading, PlayerBundleBuilder},
         scripting::{block::load::load_all_blocks, entity::load::load_all_entities},
-        storage::{convert_block, convert_entity, BlockType, EntityType},
+        storage::{convert_block, convert_entity},
         world::chunk::LoadableTypes,
     },
     networking::components::{client_connection_config, NetworkIP, PROTOCOL_ID},

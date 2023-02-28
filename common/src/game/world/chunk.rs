@@ -188,10 +188,7 @@ impl RawChunk {
     }
 
     pub fn get_index_for_state(&self, block_data: &String) -> Option<usize> {
-        self.palette
-            .iter()
-            .position(|i| i.eq(block_data))
-            .map(|index| index)
+        self.palette.iter().position(|i| i.eq(block_data))
     }
 
     pub fn get_state_for_index(&self, index: usize) -> Option<String> {
@@ -200,7 +197,7 @@ impl RawChunk {
 
     // This is most likely a VERY awful way to handle this however for now I just want a working solution ill
     // rewrite this if it causes major performance issues
-    pub fn update_chunk_pal(&mut self, old_vec: &Vec<String>) {
+    pub fn update_chunk_pal(&mut self, old_vec: &[String]) {
         for i in 0..self.voxels.len() {
             if let Some(block_data) = old_vec.get(self.voxels[i] as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
@@ -214,7 +211,7 @@ impl RawChunk {
 
     pub fn add_block_state(&mut self, block_data: &String) {
         let old_vec = self.palette.clone();
-        if let Some(id) = self.get_index_for_state(block_data) {
+        if let Some(_id) = self.get_index_for_state(block_data) {
         } else {
             self.palette.push(block_data.to_owned());
             self.update_chunk_pal(&old_vec);
@@ -248,6 +245,5 @@ impl RawChunk {
     pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
         let index = RawChunk::linearize(pos);
         self.get_state_for_index(self.voxels[index] as usize)
-            .map(|block_state| block_state)
     }
 }

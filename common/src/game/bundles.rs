@@ -1,6 +1,6 @@
 use crate::networking::components::Player;
-use bevy::{gltf::Gltf, math::Vec2Swizzles, prelude::*, render::primitives::Aabb};
-use bevy_rapier3d::{prelude::*, rapier::prelude::InteractionGroups};
+use bevy::{prelude::*, render::primitives::Aabb};
+use bevy_rapier3d::{prelude::*};
 
 #[derive(Resource, Default)]
 pub struct AssetsLoading(pub Vec<HandleUntyped>);

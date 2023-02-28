@@ -3,16 +3,16 @@ use bevy::{
     render::{mesh::Indices, render_resource::PrimitiveTopology},
     tasks::{AsyncComputeTaskPool, Task},
 };
-use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
+use bevy_rapier3d::prelude::{Collider};
 use common::game::world::chunk::{
-    Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelType, VoxelVisibility, CHUNK_SIZE,
+    Chunk, LoadableTypes, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE,
 };
 use futures_lite::future;
 use itertools::Itertools;
 
 use crate::states::{
     game::world::chunk::{
-        ChunkQueue, CurrentChunks, DirtyChunks, PlayerChunk, RenderedChunk, ViewDistance,
+        ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance,
     },
     loading::LoadableAssets,
 };
@@ -438,7 +438,7 @@ pub fn build_mesh(
         ) {
             chunk_queue
                 .mesh
-                .push((evt.pos.into(), evt.raw_chunk.clone()));
+                .push((evt.pos, evt.raw_chunk.clone()));
         }
     }
 }
@@ -459,10 +459,10 @@ pub fn process_task(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     texture_atlas: Res<Assets<TextureAtlas>>,
-    mut loadable_assets: ResMut<LoadableAssets>,
-    mut current_chunks: ResMut<CurrentChunks>,
+    loadable_assets: ResMut<LoadableAssets>,
+    current_chunks: ResMut<CurrentChunks>,
 ) {
-    let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
+    let _block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
@@ -503,12 +503,12 @@ pub fn process_task(
 pub fn process_queue(
     mut chunk_queue: ResMut<ChunkQueue>,
     mut commands: Commands,
-    mut loadable_assets: ResMut<LoadableAssets>,
+    loadable_assets: ResMut<LoadableAssets>,
     loadable_types: Res<LoadableTypes>,
     texture_atlas: Res<Assets<TextureAtlas>>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    mut current_chunks: ResMut<CurrentChunks>,
+    _meshes: ResMut<Assets<Mesh>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
+    _current_chunks: ResMut<CurrentChunks>,
 ) {
     //TODO: Look into some other way to do this and profile it. Lots of clones for every chunk
     let task_pool = AsyncComputeTaskPool::get();
@@ -621,8 +621,8 @@ pub fn process_queue(
                 })),
             )
         })
-        .for_each(|(chunk_pos, chunk)| {
-            let chunk_id = commands.spawn(chunk).id();
+        .for_each(|(_chunk_pos, chunk)| {
+            let _chunk_id = commands.spawn(chunk).id();
             // current_chunks.insert_entity(chunk_pos, chunk_id);
         });
 }
@@ -657,5 +657,5 @@ fn ao_convert(ao: Vec<u8>) -> Vec<[f32; 4]> {
             _ => res.extend_from_slice(&[[1., 1., 1., 1.0]]),
         }
     }
-    return res;
+    res
 }

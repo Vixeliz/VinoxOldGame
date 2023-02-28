@@ -1,5 +1,3 @@
-use crate::networking::syncing::SentChunks;
-
 use super::generation::generate_chunk;
 use bevy::{
     ecs::{schedule::ShouldRun, system::SystemParam},
@@ -8,10 +6,7 @@ use bevy::{
     utils::FloatOrd,
 };
 use bimap::BiMap;
-use common::{
-    game::world::chunk::{ChunkComp, CHUNK_SIZE},
-    networking::components::Player,
-};
+use common::game::world::chunk::{ChunkComp, CHUNK_SIZE};
 use futures_lite::future;
 use std::collections::*;
 
@@ -86,11 +81,9 @@ impl CurrentLoadPoints {
                 || (pos.z > (max_bound.x + point.z) || pos.z < (min_bound.x + point.z))
             {
                 return Some(false);
-            } else {
-                return Some(true);
             }
         }
-        None
+        Some(true)
     }
 }
 
@@ -188,7 +181,7 @@ pub fn destroy_chunks(
 }
 
 pub fn clear_unloaded_chunks(
-    mut current_chunks: ResMut<CurrentChunks>,
+    current_chunks: ResMut<CurrentChunks>,
     current_load_points: Res<CurrentLoadPoints>,
     view_distance: Res<ViewDistance>,
     mut chunk_queue: ResMut<ChunkQueue>,

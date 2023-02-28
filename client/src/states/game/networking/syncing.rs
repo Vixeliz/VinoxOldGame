@@ -3,17 +3,16 @@ use std::{io::Cursor, time::Duration};
 use bevy::{
     core_pipeline::bloom::BloomSettings,
     prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use bevy_atmosphere::prelude::*;
 use bevy_easings::{Ease, EaseMethod, EasingType};
 
-use bevy_rapier3d::prelude::{Collider, ComputedColliderShape};
+
 use bevy_renet::renet::RenetClient;
 use common::{
     game::{
         bundles::PlayerBundleBuilder,
-        world::chunk::{Chunk, CHUNK_SIZE},
+        world::chunk::{Chunk},
     },
     networking::components::{
         ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
@@ -29,10 +28,8 @@ use crate::{
         game::{
             input::CameraController,
             networking::components::ControlledPlayer,
-            rendering::meshing::{build_mesh, MeshChunkEvent},
-            world::chunk::{CreateChunkEvent, RenderedChunk},
+            world::chunk::{CreateChunkEvent},
         },
-        loading::LoadableAssets,
     },
 };
 
@@ -48,8 +45,8 @@ pub fn client_sync_players(
     mut entity_buffer: ResMut<EntityBuffer>,
     _asset_server: Res<AssetServer>,
     player_builder: Res<PlayerBundleBuilder>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    _meshes: ResMut<Assets<Mesh>>,
+    _materials: ResMut<Assets<StandardMaterial>>,
     mut chunk_event: EventWriter<CreateChunkEvent>,
 ) {
     let client_id = client.client_id();

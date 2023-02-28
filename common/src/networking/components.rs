@@ -5,7 +5,7 @@ pub struct NetworkIP(pub String);
 
 use std::time::Duration;
 
-use bevy::prelude::*;
+
 use bevy_renet::renet::{
     ChannelConfig, ChunkChannelConfig, ReliableChannelConfig, RenetConnectionConfig,
     UnreliableChannelConfig,

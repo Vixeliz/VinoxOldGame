@@ -1,6 +1,6 @@
 use directories::ProjectDirs;
-use std::fs::{self, File};
-use std::io::prelude::*;
+use std::fs::{self};
+
 use walkdir::WalkDir;
 
 use super::entity_descriptor::EntityDescriptor;
