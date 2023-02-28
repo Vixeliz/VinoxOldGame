@@ -124,15 +124,16 @@ impl<'w, 's> ChunkManager<'w, 's> {
                 }
             }
         }
+        res.sort_unstable_by_key(|key| FloatOrd(key.pos.as_vec3().distance(pos.as_vec3())));
 
         res
     }
 
     pub fn world_to_chunk(&self, pos: Vec3) -> IVec3 {
         IVec3::new(
-            (pos.x / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
-            (pos.y / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
-            (pos.z / (CHUNK_SIZE as f32 - 1.0)).floor() as i32,
+            (pos.x / (CHUNK_SIZE as f32)).floor() as i32,
+            (pos.y / (CHUNK_SIZE as f32)).floor() as i32,
+            (pos.z / (CHUNK_SIZE as f32)).floor() as i32,
         )
     }
 
