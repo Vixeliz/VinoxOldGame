@@ -268,7 +268,7 @@ pub fn update_borders(
                                 }
                             }
                         }
-                        _ => {
+                        5 => {
                             let chunk_pos = chunk_pos + IVec3::new(0, 0, 1);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
                                 let neighbor = &mut chunks.get_mut(neighbor).unwrap();
@@ -286,6 +286,9 @@ pub fn update_borders(
                                     }
                                 }
                             }
+                        }
+                        _ => {
+                            unreachable!()
                         }
                     }
                 }
