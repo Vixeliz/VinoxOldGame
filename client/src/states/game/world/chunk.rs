@@ -173,6 +173,7 @@ pub fn update_borders(
     mut dirty_chunks: ResMut<DirtyChunks>,
     mut chunk_queue: ResMut<ChunkQueue>,
     mut mesh_event: EventWriter<MeshChunkEvent>,
+    loadable_types: Res<LoadableTypes>,
 ) {
     let cloned_chunks = dirty_chunks.chunks.clone();
     for chunk_pos in cloned_chunks.iter().cloned() {
