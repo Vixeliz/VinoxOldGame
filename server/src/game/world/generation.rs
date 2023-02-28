@@ -8,15 +8,14 @@ pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
     let ridged_noise: RidgedMulti<OpenSimplex> =
         RidgedMulti::new(seed).set_octaves(8).set_frequency(0.25);
     let mut raw_chunk = RawChunk::new();
-    for x in 1..(CHUNK_SIZE) {
-        for z in 1..(CHUNK_SIZE) {
-            for y in 1..(CHUNK_SIZE) {
+    for x in 1..=CHUNK_SIZE {
+        for z in 1..=CHUNK_SIZE {
+            for y in 1..=CHUNK_SIZE {
                 let full_x = x as i32 + ((CHUNK_SIZE as i32) * pos.x);
                 let full_z = z as i32 + ((CHUNK_SIZE as i32) * pos.z);
                 let full_y = y as i32 + ((CHUNK_SIZE as i32) * pos.y);
                 let noise_val =
                     ridged_noise.get([(full_x as f64 / 100.0), (full_z as f64 / 100.0)]) * 100.0;
-
                 if full_y as f64 <= noise_val && full_y as f64 >= (noise_val - 2.0) {
                     raw_chunk.add_block_state(&"vinoxgrass".to_string());
                     raw_chunk.set_block(
@@ -33,6 +32,18 @@ pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
                     raw_chunk
                         .set_block(UVec3::new(x as u32, y as u32, z as u32), "air".to_string());
                 }
+                raw_chunk.add_block_state(&"vinoxcobblestone".to_string());
+                raw_chunk.add_block_state(&"vinoxdirt".to_string());
+                raw_chunk.set_block(
+                    UVec3::new(CHUNK_SIZE, CHUNK_SIZE, CHUNK_SIZE),
+                    "vinoxcobblestone".to_string(),
+                );
+
+                raw_chunk.set_block(UVec3::new(CHUNK_SIZE, 1, 1), "vinoxdirt".to_string());
+                raw_chunk.set_block(
+                    UVec3::new(CHUNK_SIZE - 1, 1, 1),
+                    "vinoxcobblestone".to_string(),
+                );
 
                 // let multi_noise = ridged_noise.get([
                 //     full_x as f64 / 10.0,

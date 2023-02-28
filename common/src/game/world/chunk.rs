@@ -155,10 +155,7 @@ impl Chunk for RawChunk {
     const Z: usize = CHUNK_SIZE_PADDED as usize;
 
     fn get(&self, x: u32, y: u32, z: u32, loadable_types: &LoadableTypes) -> Self::Output {
-        self.get_voxel(
-            RawChunk::linearize(UVec3::new(x, y, z)) as u16,
-            loadable_types,
-        )
+        self.get_voxel(RawChunk::linearize(UVec3::new(x, y, z)), loadable_types)
     }
 }
 
@@ -173,18 +170,19 @@ impl RawChunk {
         raw_chunk
     }
 
-    pub fn get_voxel(&self, index: u16, loadable_types: &LoadableTypes) -> VoxelType {
+    pub fn get_voxel(&self, index: usize, loadable_types: &LoadableTypes) -> VoxelType {
         let block_state = self
-            .get_state_for_index(self.voxels[index as usize] as usize)
+            .get_state_for_index(self.voxels[index] as usize)
             .unwrap();
+        let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
         if block_state.eq("air") {
             VoxelType::Empty(0)
         } else {
             let voxel_visibility = loadable_types.blocks.get(&block_state).unwrap().visibility;
             match voxel_visibility {
-                VoxelVisibility::Empty => VoxelType::Empty(index),
-                VoxelVisibility::Opaque => VoxelType::Opaque(index),
-                VoxelVisibility::Transparent => VoxelType::Transparent(index),
+                VoxelVisibility::Empty => VoxelType::Empty(block_id),
+                VoxelVisibility::Opaque => VoxelType::Opaque(block_id),
+                VoxelVisibility::Transparent => VoxelType::Transparent(block_id),
             }
         }
     }
@@ -234,7 +232,7 @@ impl RawChunk {
             warn!("Block data: {}, doesn't exist!", block_data);
         }
     }
-    // This actual chunks data starts at 1,1,1 and ends at chunk_size - 1
+    // This actual chunks data starts at 1,1,1 and ends at chunk_size
     pub fn set_block(&mut self, pos: UVec3, block_data: String) {
         let index = RawChunk::linearize(pos);
         if let Some(block_type) = self.get_index_for_state(&block_data) {
@@ -251,13 +249,5 @@ impl RawChunk {
         let index = RawChunk::linearize(pos);
         self.get_state_for_index(self.voxels[index] as usize)
             .map(|block_state| block_state)
-    }
-    pub fn get_visibility(&self, index: usize) -> VoxelVisibility {
-        if index == 0 {
-            // When we switch to events we will actually get the visibility from the files
-            VoxelVisibility::Empty
-        } else {
-            VoxelVisibility::Opaque
-        }
     }
 }

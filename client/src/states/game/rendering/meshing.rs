@@ -33,14 +33,14 @@ pub struct QuadGroups {
     pub groups: [Vec<Quad>; 6],
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub enum Axis {
     X,
     Y,
     Z,
 }
 
-#[derive(PartialEq, Eq, Clone, Copy)]
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
 pub struct Side {
     pub axis: Axis,
     pub positive: bool,
@@ -382,7 +382,6 @@ where
             && (z > 0 && z < (C::Z - 1) as u32)
         {
             let voxel = chunk.get(x, y, z, loadable_types);
-
             match voxel.visibility() {
                 EMPTY => continue,
                 visibility => {
@@ -485,9 +484,9 @@ pub fn process_task(
                             ..default()
                         }),
                         transform: Transform::from_translation(Vec3::new(
-                            (chunk.pos[0] * (CHUNK_SIZE - 1) as i32) as f32,
-                            (chunk.pos[1] * (CHUNK_SIZE - 1) as i32) as f32,
-                            (chunk.pos[2] * (CHUNK_SIZE - 1) as i32) as f32,
+                            (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
+                            (chunk.pos[1] * (CHUNK_SIZE) as i32) as f32,
+                            (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
                         )),
                         ..Default::default()
                     },

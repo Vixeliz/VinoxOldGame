@@ -4,7 +4,10 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Velocity;
 
-use super::networking::components::ControlledPlayer;
+use super::{
+    networking::components::ControlledPlayer,
+    world::chunk::{DirtyChunks, PlayerChunk},
+};
 // pub fn move_player(
 //     mut velocity_query: Query<&mut Velocity, With<ControlledPlayer>>,
 //     input: Res<Input<KeyCode>>,
@@ -116,6 +119,8 @@ pub fn camera_controller(
     mut move_toggled: Local<bool>,
     mut query: Query<(&mut Transform, &mut CameraController), With<Camera>>,
     mut velocity_query: Query<&mut Velocity, With<ControlledPlayer>>,
+    mut dirty_chunks: ResMut<DirtyChunks>,
+    player_chunk: Res<PlayerChunk>,
 ) {
     let dt = time.delta_seconds();
 
@@ -130,6 +135,9 @@ pub fn camera_controller(
             return;
         }
 
+        if key_input.just_pressed(KeyCode::E) {
+            dirty_chunks.mark_dirty(player_chunk.chunk_pos);
+        }
         // Handle key input
         let mut axis_input = Vec3::ZERO;
         if key_input.pressed(options.key_forward) {

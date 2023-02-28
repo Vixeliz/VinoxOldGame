@@ -185,10 +185,11 @@ pub fn update_borders(
                         0 => {
                             let chunk_pos = chunk_pos + IVec3::new(0, -1, 0);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                                for x in 1..CHUNK_SIZE {
-                                    for z in 1..CHUNK_SIZE {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap();
+                                for x in 1..=CHUNK_SIZE {
+                                    for z in 1..=CHUNK_SIZE {
                                         let vox = neighbor
+                                            .chunk_data
                                             .get_block(UVec3::new(x, CHUNK_SIZE, z))
                                             .unwrap();
                                         chunk_data.add_block_state(&vox);
@@ -200,10 +201,13 @@ pub fn update_borders(
                         1 => {
                             let chunk_pos = chunk_pos + IVec3::new(0, 1, 0);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                                for x in 1..CHUNK_SIZE {
-                                    for z in 1..CHUNK_SIZE {
-                                        let vox = neighbor.get_block(UVec3::new(x, 1, z)).unwrap();
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap();
+                                for x in 1..=CHUNK_SIZE {
+                                    for z in 1..=CHUNK_SIZE {
+                                        let vox = neighbor
+                                            .chunk_data
+                                            .get_block(UVec3::new(x, 1, z))
+                                            .unwrap();
                                         chunk_data.add_block_state(&vox);
                                         chunk_data.set_block(
                                             UVec3::new(x, CHUNK_SIZE_PADDED - 1, z),
@@ -216,10 +220,11 @@ pub fn update_borders(
                         2 => {
                             let chunk_pos = chunk_pos + IVec3::new(-1, 0, 0);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                                for z in 1..CHUNK_SIZE {
-                                    for y in 1..CHUNK_SIZE {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap();
+                                for z in 1..=CHUNK_SIZE {
+                                    for y in 1..=CHUNK_SIZE {
                                         let vox = neighbor
+                                            .chunk_data
                                             .get_block(UVec3::new(CHUNK_SIZE, y, z))
                                             .unwrap();
                                         chunk_data.add_block_state(&vox);
@@ -231,10 +236,13 @@ pub fn update_borders(
                         3 => {
                             let chunk_pos = chunk_pos + IVec3::new(1, 0, 0);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                                for z in 1..CHUNK_SIZE {
-                                    for y in 1..CHUNK_SIZE {
-                                        let vox = neighbor.get_block(UVec3::new(0, y, z)).unwrap();
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap();
+                                for z in 1..=CHUNK_SIZE {
+                                    for y in 1..=CHUNK_SIZE {
+                                        let vox = neighbor
+                                            .chunk_data
+                                            .get_block(UVec3::new(1, y, z))
+                                            .unwrap();
                                         chunk_data.add_block_state(&vox);
                                         chunk_data.set_block(
                                             UVec3::new(CHUNK_SIZE_PADDED - 1, y, z),
@@ -247,10 +255,11 @@ pub fn update_borders(
                         4 => {
                             let chunk_pos = chunk_pos + IVec3::new(0, 0, -1);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                                for x in 1..CHUNK_SIZE {
-                                    for y in 1..CHUNK_SIZE {
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap();
+                                for x in 1..=CHUNK_SIZE {
+                                    for y in 1..=CHUNK_SIZE {
                                         let vox = neighbor
+                                            .chunk_data
                                             .get_block(UVec3::new(x, y, CHUNK_SIZE))
                                             .unwrap();
                                         chunk_data.add_block_state(&vox);
@@ -262,10 +271,13 @@ pub fn update_borders(
                         _ => {
                             let chunk_pos = chunk_pos + IVec3::new(0, 0, 1);
                             if let Some(neighbor) = current_chunks.get_entity(chunk_pos) {
-                                let neighbor = &mut chunks.get_mut(neighbor).unwrap().chunk_data;
-                                for x in 1..CHUNK_SIZE {
-                                    for y in 1..CHUNK_SIZE {
-                                        let vox = neighbor.get_block(UVec3::new(x, y, 0)).unwrap();
+                                let neighbor = &mut chunks.get_mut(neighbor).unwrap();
+                                for x in 1..=CHUNK_SIZE {
+                                    for y in 1..=CHUNK_SIZE {
+                                        let vox = neighbor
+                                            .chunk_data
+                                            .get_block(UVec3::new(x, y, 1))
+                                            .unwrap();
                                         chunk_data.add_block_state(&vox);
                                         chunk_data.set_block(
                                             UVec3::new(x, y, CHUNK_SIZE_PADDED - 1),
@@ -298,6 +310,7 @@ pub fn receive_chunks(
     mut dirty_chunks: ResMut<DirtyChunks>,
     player_chunk: Res<PlayerChunk>,
     view_distance: Res<ViewDistance>,
+    loadable_types: Res<LoadableTypes>,
 ) {
     for evt in event.iter() {
         if player_chunk.is_in_radius(
@@ -314,16 +327,11 @@ pub fn receive_chunks(
                 })
                 .id();
             current_chunks.insert_entity(evt.pos, chunk_id);
-            mesh_event.send(MeshChunkEvent {
-                raw_chunk: evt.raw_chunk.clone(),
-                pos: evt.pos,
-            });
-            if current_chunks
-                .get_entity(evt.pos - IVec3::new(-1, 0, 0))
-                .is_some()
-            {
-                dirty_chunks.mark_dirty(evt.pos - IVec3::new(-1, 0, 0));
-            }
+            // mesh_event.send(MeshChunkEvent {
+            //     raw_chunk: evt.raw_chunk.clone(),
+            //     pos: evt.pos,
+            // });
+            dirty_chunks.mark_dirty(evt.pos);
         }
     }
 }
