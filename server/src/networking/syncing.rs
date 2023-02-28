@@ -1,25 +1,17 @@
-use std::{
-    collections::HashSet,
-    io::{Cursor},
-    mem::size_of_val,
-};
+use std::{collections::HashSet, io::Cursor, mem::size_of_val};
 
-use bevy::{prelude::*};
+use bevy::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::{bundles::PlayerBundleBuilder},
+    game::bundles::PlayerBundleBuilder,
     networking::components::{
         ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages,
     },
 };
-use zstd::stream::{
-    copy_encode,
-};
+use zstd::stream::copy_encode;
 
-use crate::game::world::{
-    chunk::{ChunkManager},
-};
+use crate::game::world::chunk::ChunkManager;
 
 use super::components::ServerLobby;
 
@@ -165,7 +157,7 @@ pub fn send_chunks(
                     if !sent_chunks.chunks.contains(&chunk.pos) {
                         let raw_chunk = chunk.chunk_data.clone();
                         if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
-                            chunk_data: raw_chunk.clone(),
+                            chunk_data: raw_chunk,
                             pos: chunk.pos.into(),
                         }) {
                             let mut final_chunk = Cursor::new(raw_chunk_bin);
