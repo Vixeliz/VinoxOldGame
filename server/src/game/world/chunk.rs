@@ -162,9 +162,6 @@ pub fn generate_chunks_world(
                 }
             }
         }
-        chunk_queue
-            .create
-            .sort_unstable_by_key(|key| FloatOrd(key.as_vec3().distance(point.as_vec3())));
     }
 }
 
