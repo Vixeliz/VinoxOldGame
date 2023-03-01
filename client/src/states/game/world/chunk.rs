@@ -288,17 +288,29 @@ pub fn receive_chunks(
             IVec2::new(-view_distance.horizontal, -view_distance.vertical),
             IVec2::new(view_distance.horizontal, view_distance.vertical),
         ) {
-            let chunk_id = commands
-                .spawn(ChunkComp {
+            if let Some(chunk_id) = current_chunks.get_entity(evt.pos) {
+                commands.entity(chunk_id).insert(ChunkComp {
                     pos: ChunkPos(evt.pos),
                     chunk_data: evt.raw_chunk.to_owned(),
                     saved_entities: Vec::new(),
                     entities: Vec::new(),
-                })
-                .id();
-            current_chunks.insert_entity(evt.pos, chunk_id);
-            if !(evt.raw_chunk.palette == vec!["air".to_string()]) {
-                commands.entity(chunk_id).insert(DirtyChunk);
+                });
+                if !(evt.raw_chunk.palette == vec!["air".to_string()]) {
+                    commands.entity(chunk_id).insert(DirtyChunk);
+                }
+            } else {
+                let chunk_id = commands
+                    .spawn(ChunkComp {
+                        pos: ChunkPos(evt.pos),
+                        chunk_data: evt.raw_chunk.to_owned(),
+                        saved_entities: Vec::new(),
+                        entities: Vec::new(),
+                    })
+                    .id();
+                current_chunks.insert_entity(evt.pos, chunk_id);
+                if !(evt.raw_chunk.palette == vec!["air".to_string()]) {
+                    commands.entity(chunk_id).insert(DirtyChunk);
+                }
             }
         }
     }

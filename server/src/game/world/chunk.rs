@@ -1,3 +1,5 @@
+use crate::networking::syncing::SentChunks;
+
 use super::generation::generate_chunk;
 use bevy::{
     ecs::{schedule::ShouldRun, system::SystemParam},
@@ -5,8 +7,10 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
     utils::FloatOrd,
 };
-use bimap::BiMap;
-use common::game::world::chunk::{ChunkComp, ChunkPos, CHUNK_SIZE};
+use common::{
+    game::world::chunk::{ChunkComp, ChunkPos, CHUNK_SIZE},
+    networking::components::Player,
+};
 use futures_lite::future;
 use std::collections::*;
 
@@ -65,20 +69,6 @@ pub struct ChunkQueue {
     pub create: Vec<IVec3>,
     pub remove: Vec<IVec3>,
 }
-
-// impl CurrentLoadPoints {
-//     fn is_in_radius(&self, pos: IVec3, min_bound: IVec2, max_bound: IVec2) -> Option<bool> {
-//         for point in self.points.left_values() {
-//             if (pos.x > (max_bound.x + point.x) || pos.x < (min_bound.x + point.x))
-//                 || (pos.y > (max_bound.y + point.y) || pos.y < (min_bound.y + point.y))
-//                 || (pos.z > (max_bound.x + point.z) || pos.z < (min_bound.x + point.z))
-//             {
-//                 return Some(false);
-//             }
-//         }
-//         Some(true)
-//     }
-// }
 
 #[derive(SystemParam)]
 pub struct ChunkManager<'w, 's> {
@@ -154,11 +144,14 @@ pub fn generate_chunks_world(
 
 pub fn destroy_chunks(
     mut commands: Commands,
-    // mut chunk_queue: ResMut<ChunkQueue>,
     mut current_chunks: ResMut<CurrentChunks>,
     remove_chunks: Query<&ChunkPos, With<RemoveChunk>>,
+    mut player_query: Query<&mut SentChunks>,
 ) {
     for chunk in remove_chunks.iter() {
+        for mut player in player_query.iter_mut() {
+            player.chunks.remove(&chunk.0);
+        }
         commands
             .entity(current_chunks.remove_entity(chunk.0).unwrap())
             .despawn_recursive();
@@ -166,21 +159,21 @@ pub fn destroy_chunks(
 }
 
 pub fn clear_unloaded_chunks(
+    mut commands: Commands,
     current_chunks: ResMut<CurrentChunks>,
     load_points: Query<&LoadPoint>,
     view_distance: Res<ViewDistance>,
-    mut chunk_queue: ResMut<ChunkQueue>,
 ) {
     for chunk_pos in current_chunks.chunks.keys() {
         let entity = current_chunks.get_entity(*chunk_pos).unwrap();
-        if let Ok(load_point) = load_points.get(entity) {
+        for load_point in load_points.iter() {
             if let Some(loaded) = load_point.is_in_radius(
                 *chunk_pos,
                 IVec2::new(-view_distance.horizontal, -view_distance.vertical),
                 IVec2::new(view_distance.horizontal, view_distance.vertical),
             ) {
                 if !loaded {
-                    chunk_queue.remove.push(*chunk_pos);
+                    commands.entity(entity).insert(RemoveChunk);
                 }
             }
         }

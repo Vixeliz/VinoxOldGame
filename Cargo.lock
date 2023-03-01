@@ -3874,7 +3874,6 @@ dependencies = [
  "bevy",
  "bevy_rapier3d",
  "bevy_renet",
- "bimap",
  "bincode",
  "common",
  "directories",
