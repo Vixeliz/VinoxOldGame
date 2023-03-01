@@ -10,8 +10,8 @@ use common::{
 };
 use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
 
-pub fn setup(_commands: Commands, mut chunk_manager: ChunkManager) {
-    chunk_manager.add_point(IVec3 { x: 0, y: 0, z: 0 }, 0);
+pub fn setup(mut commands: Commands, mut chunk_manager: ChunkManager) {
+    commands.spawn(LoadPoint(IVec3::new(0, 0, 0)));
 }
 
 use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
@@ -19,7 +19,7 @@ use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
 use bevy::app::AppExit;
 use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig};
 
-use super::world::chunk::{ChunkGenerationPlugin, ChunkManager};
+use super::world::chunk::{ChunkGenerationPlugin, ChunkManager, LoadPoint};
 
 extern crate common;
 

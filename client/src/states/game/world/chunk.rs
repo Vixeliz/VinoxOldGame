@@ -4,7 +4,7 @@ use bevy::{ecs::schedule::ShouldRun, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 
 use common::game::world::chunk::{
-    Chunk, ChunkComp, LoadableTypes, RawChunk, VoxelType, CHUNK_BOUND, CHUNK_SIZE,
+    Chunk, ChunkComp, ChunkPos, LoadableTypes, RawChunk, VoxelType, CHUNK_BOUND, CHUNK_SIZE,
     CHUNK_SIZE_PADDED, TOTAL_CHUNK_SIZE,
 };
 
@@ -170,7 +170,7 @@ pub fn update_borders(
 ) {
     let mut dirty_chunk_positions = Vec::new();
     for dirty_chunk in chunk_set.p0().iter() {
-        dirty_chunk_positions.push(dirty_chunk.0.pos);
+        dirty_chunk_positions.push(dirty_chunk.0.pos.0);
     }
     for dirty_chunk_pos in dirty_chunk_positions.iter() {
         if current_chunks.get_entity(*dirty_chunk_pos).is_some() {
@@ -290,7 +290,7 @@ pub fn receive_chunks(
         ) {
             let chunk_id = commands
                 .spawn(ChunkComp {
-                    pos: evt.pos,
+                    pos: ChunkPos(evt.pos),
                     chunk_data: evt.raw_chunk.to_owned(),
                     saved_entities: Vec::new(),
                     entities: Vec::new(),

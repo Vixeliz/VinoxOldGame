@@ -77,8 +77,11 @@ pub enum GeometryType {
 }
 
 #[derive(Component)]
+pub struct ChunkPos(pub IVec3);
+
+#[derive(Component)]
 pub struct ChunkComp {
-    pub pos: IVec3,
+    pub pos: ChunkPos,
     pub chunk_data: RawChunk,
     pub entities: Vec<Entity>,
     pub saved_entities: Vec<String>,

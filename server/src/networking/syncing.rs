@@ -11,7 +11,7 @@ use common::{
 };
 use zstd::stream::copy_encode;
 
-use crate::game::world::chunk::ChunkManager;
+use crate::game::world::chunk::{ChunkManager, LoadPoint};
 
 use super::components::ServerLobby;
 
@@ -74,11 +74,11 @@ pub fn server_update_system(
                 let chunk_pos = chunk_manager.world_to_chunk(transform.translation);
                 for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
                     if let Ok((_, _, _, mut sent_chunks)) = players.get_mut(player_entity) {
-                        sent_chunks.chunks.insert(chunk.pos);
+                        sent_chunks.chunks.insert(chunk.pos.0);
                         let raw_chunk = chunk.chunk_data.clone();
                         if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
                             chunk_data: raw_chunk.clone(),
-                            pos: chunk.pos.into(),
+                            pos: chunk.pos.0.into(),
                         }) {
                             let mut final_chunk = Cursor::new(raw_chunk_bin);
                             let mut output = Cursor::new(Vec::new());
@@ -143,6 +143,7 @@ pub fn server_network_sync(mut server: ResMut<RenetServer>, query: Query<(Entity
 }
 
 pub fn send_chunks(
+    mut commands: Commands,
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
     mut players: Query<(&Transform, &mut SentChunks), With<Player>>,
@@ -152,13 +153,13 @@ pub fn send_chunks(
         if let Some(player_entity) = lobby.players.get(&client_id) {
             if let Ok((player_transform, mut sent_chunks)) = players.get_mut(*player_entity) {
                 let chunk_pos = chunk_manager.world_to_chunk(player_transform.translation);
-                chunk_manager.add_point(chunk_pos, client_id);
+                commands.entity(*player_entity).insert(LoadPoint(chunk_pos));
                 for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
-                    if !sent_chunks.chunks.contains(&chunk.pos) {
+                    if !sent_chunks.chunks.contains(&chunk.pos.0) {
                         let raw_chunk = chunk.chunk_data.clone();
                         if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
                             chunk_data: raw_chunk,
-                            pos: chunk.pos.into(),
+                            pos: chunk.pos.0.into(),
                         }) {
                             let mut final_chunk = Cursor::new(raw_chunk_bin);
                             let mut output = Cursor::new(Vec::new());
@@ -176,7 +177,7 @@ pub fn send_chunks(
                                     output.get_ref().clone(),
                                 );
                             }
-                            sent_chunks.chunks.insert(chunk.pos);
+                            sent_chunks.chunks.insert(chunk.pos.0);
                         }
                     }
                 }
