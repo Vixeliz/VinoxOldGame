@@ -140,6 +140,31 @@ pub struct RawChunk {
     pub voxels: [u16; TOTAL_CHUNK_SIZE as usize],
 }
 
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Component)]
+pub struct LightChunk {
+    pub voxels: [u8; TOTAL_CHUNK_SIZE as usize],
+}
+
+impl LightChunk {
+    pub fn get_voxel(&self, x: u32, y: u32, z: u32) -> u8 {
+        let index = RawChunk::linearize(UVec3::new(x, y, z));
+        self.voxels[index]
+    }
+    pub fn calculate_light(&mut self, raw_chunk: &RawChunk, loadable_types: &LoadableTypes) {
+        for i in 0..raw_chunk.voxels.len() {
+            let (x, y, z) = RawChunk::delinearize(i);
+            if (x > 0 && x < (CHUNK_BOUND) as u32)
+                && (y > 0 && y < (CHUNK_BOUND) as u32)
+                && (z > 0 && z < (CHUNK_BOUND) as u32)
+            {
+                if let Some(light_val) = raw_chunk.get_data(i, loadable_types) {
+                    let light_val = light_val.light_val;
+                }
+            }
+        }
+    }
+}
+
 impl<'s> Default for RawChunk {
     fn default() -> RawChunk {
         let mut raw_chunk = RawChunk {
@@ -188,6 +213,18 @@ impl RawChunk {
                 VoxelVisibility::Opaque => VoxelType::Opaque(block_id),
                 VoxelVisibility::Transparent => VoxelType::Transparent(block_id),
             }
+        }
+    }
+
+    pub fn get_data(&self, index: usize, loadable_types: &LoadableTypes) -> Option<BlockType> {
+        let block_state = self
+            .get_state_for_index(self.voxels[index] as usize)
+            .unwrap();
+        let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
+        if block_state.eq("air") {
+            None
+        } else {
+            Some(loadable_types.blocks.get(&block_state).unwrap().clone())
         }
     }
 

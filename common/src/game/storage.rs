@@ -33,7 +33,6 @@ pub struct BlockType {
     pub namespace: String,
     pub block_name: String,
     pub textures: HashMap<String, String>,
-    pub model: Option<String>, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
     pub interactable: bool,
     pub friction: f32,
     pub break_time: f32,
@@ -43,6 +42,7 @@ pub struct BlockType {
     pub block_script: Option<String>,
     pub visibility: VoxelVisibility,
     pub block_geometry: GeometryType,
+    pub light_val: u8,
 }
 
 #[derive(Debug, Clone)]
@@ -66,7 +66,6 @@ pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, 
                 namespace: raw_block.namespace,
                 block_name: raw_block.block_name,
                 textures: raw_block.textures,
-                model: raw_block.model,
                 interactable: raw_block.interactable,
                 friction: raw_block.friction,
                 break_time: raw_block.break_time,
@@ -78,6 +77,7 @@ pub fn convert_block(block_descriptor: Vec<BlockDescriptor>) -> HashMap<String, 
                     .unwrap_or_default(),
                 block_geometry: GeometryType::from_str(raw_block.block_geometry.as_str())
                     .unwrap_or_default(),
+                light_val: raw_block.light_val,
             },
         );
     }

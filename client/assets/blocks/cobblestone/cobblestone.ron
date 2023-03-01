@@ -9,7 +9,6 @@ BlockDescriptor(
     "front": "cobblestone.png",
     "back": "cobblestone.png",
     },
-    model: None,
     interactable: false,
     friction: 0.5,
     break_time: 5.0,
@@ -18,5 +17,6 @@ BlockDescriptor(
     break_sound: Some("dirt_break.wav"),
     block_script: Some("dirt.lua"),
     visibility: "opaque",
-    block_geometry: "block"
+    block_geometry: "block",
+    light_val: 0
 )

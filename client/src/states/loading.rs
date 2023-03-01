@@ -165,20 +165,6 @@ pub fn load_blocks(
                     .block_textures
                     .insert(block_identifier, texture_array);
             }
-            if let Some(model_path) = block.model.clone() {
-                let mut path = "blocks/".to_string();
-                path.push_str(block.block_name.as_str());
-                path.push('/');
-                path.push_str(model_path.as_str());
-                path.push_str("#Scene0");
-                let model_handle: Handle<Scene> = asset_server.load(model_path);
-                loading.0.push(model_handle.clone_untyped());
-                let mut block_identifier = block.namespace.to_owned();
-                block_identifier.push_str(&block.block_name.to_owned());
-                loadable_assets
-                    .block_models
-                    .insert(block_identifier, model_handle);
-            }
         }
         *has_ran = true;
     }

@@ -12,7 +12,6 @@ BlockDescriptor(
     "front": "grass.png",
     "back": "grass.png",
     },
-    model: None, // We will allow someone to specify a gltf however i want to build in a few types such as slabs
     interactable: false,
     friction: 0.5,
     break_time: 5,
@@ -21,6 +20,7 @@ BlockDescriptor(
     break_sound: Some("grass_break.wav"),
     block_script: Some("grass.lua"),
     visibility: "opaque",
-    block_geometry: "block"
+    block_geometry: "block",
+    light_val: 0
  
 )
