@@ -1,5 +1,8 @@
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
-use bevy_rapier3d::prelude::{QueryFilter, RapierContext, Velocity};
+use bevy_rapier3d::prelude::{
+    KinematicCharacterController, KinematicCharacterControllerOutput, QueryFilter,
+    RapierConfiguration, RapierContext, Velocity,
+};
 use bevy_renet::renet::RenetClient;
 use common::{
     game::world::chunk::{
@@ -103,8 +106,8 @@ impl Default for CameraController {
             key_down: KeyCode::C,
             key_run: KeyCode::LShift,
             keyboard_key_enable_mouse: KeyCode::M,
-            walk_speed: 500.0,
-            run_speed: 1500.0,
+            walk_speed: 10.0,
+            run_speed: 25.0,
             friction: 0.5,
             pitch: 0.0,
             yaw: 0.0,
@@ -120,11 +123,19 @@ pub fn camera_controller(
     key_input: Res<Input<KeyCode>>,
     mut move_toggled: Local<bool>,
     mut query: Query<(&mut Transform, &mut CameraController), With<Camera>>,
-    mut velocity_query: Query<&mut Velocity, With<ControlledPlayer>>,
+    mut player_query: Query<
+        (
+            &mut Velocity,
+            &mut KinematicCharacterController,
+            Option<&KinematicCharacterControllerOutput>,
+        ),
+        With<ControlledPlayer>,
+    >,
     player_chunk: Res<PlayerChunk>,
     current_chunks: Res<CurrentChunks>,
     mut commands: Commands,
     mut windows: ResMut<Windows>,
+    rapier_config: Res<RapierConfiguration>,
 ) {
     let dt = time.delta_seconds();
 
@@ -199,9 +210,8 @@ pub fn camera_controller(
         let mut forward = transform.forward();
         forward.y = 0.0;
         let right = transform.right();
-        let translation_delta = options.velocity.x * dt * right
-            + options.velocity.y * dt * Vec3::Y
-            + options.velocity.z * dt * forward;
+        let mut translation_delta =
+            options.velocity.x * dt * right + options.velocity.z * dt * forward;
 
         // Handle mouse input
         let mut mouse_delta = Vec2::ZERO;
@@ -228,8 +238,25 @@ pub fn camera_controller(
             options.pitch = pitch;
             options.yaw = yaw;
         }
-        if let Ok(mut player_velocity) = velocity_query.get_single_mut() {
-            player_velocity.linvel = translation_delta;
+        if let Ok((mut velocity, mut player_controller, player_info)) =
+            player_query.get_single_mut()
+        {
+            let grounded = match player_info {
+                Some(output) => output.grounded,
+                None => false,
+            };
+            let offset = if !grounded {
+                rapier_config.gravity * Vec3::Y
+            } else {
+                Vec3::ZERO
+            };
+
+            if key_input.just_pressed(KeyCode::Space) && grounded {
+                translation_delta.y += 500.0 * dt;
+            }
+
+            velocity.linvel = (offset * dt) + translation_delta;
+            player_controller.translation = Some((offset * dt) + translation_delta);
         }
     }
 }

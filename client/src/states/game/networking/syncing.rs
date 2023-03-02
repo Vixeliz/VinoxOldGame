@@ -5,6 +5,7 @@ use bevy::{core_pipeline::bloom::BloomSettings, prelude::*};
 use bevy_atmosphere::prelude::*;
 use bevy_easings::{Ease, EaseMethod, EasingType};
 
+use bevy_rapier3d::prelude::{CharacterAutostep, CharacterLength, KinematicCharacterController};
 use bevy_renet::renet::RenetClient;
 use common::{
     game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
@@ -75,7 +76,19 @@ pub fn client_sync_players(
                     client_entity.push_children(&[camera_id]);
                     client_entity
                         .insert(player_builder.build(translation.into(), id, true))
-                        .insert(ControlledPlayer);
+                        .insert(ControlledPlayer)
+                        .insert(KinematicCharacterController {
+                            snap_to_ground: Some(
+                                bevy_rapier3d::prelude::CharacterLength::Relative(0.3),
+                            ),
+                            autostep: Some(CharacterAutostep {
+                                max_height: CharacterLength::Absolute(1.0),
+                                min_width: CharacterLength::Absolute(0.5),
+                                include_dynamic_bodies: false,
+                            }),
+                            offset: CharacterLength::Absolute(0.04),
+                            ..default()
+                        });
                     cmd2.add(eml! {
                         <body s:padding="50px" s:margin-left="5px" s:justify-content="flex-start" s:align-items="flex-start">
                             "ChunkPos: "{from!(PlayerChunk:chunk_pos | fmt.c("{c}"))}

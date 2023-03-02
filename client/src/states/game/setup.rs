@@ -49,7 +49,10 @@ impl Plugin for GamePlugin {
         app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
             .add_plugin(ChunkHandling)
             .add_plugin(AtmospherePlugin)
-            .insert_resource(RapierConfiguration { ..default() })
+            .insert_resource(RapierConfiguration {
+                gravity: Vec3::new(0.0, -25.0, 0.0),
+                ..default()
+            })
             .insert_resource(NetworkMapping::default())
             .insert_resource(ClientLobby::default())
             .insert_resource(EntityBuffer::default())

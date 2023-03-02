@@ -49,10 +49,9 @@ impl PlayerBundleBuilder {
         };
         PlayerBundle {
             collider: ColliderBundle {
-                collider: Collider::cuboid(
-                    self.model_aabb.half_extents.x,
-                    self.model_aabb.half_extents.y,
-                    self.model_aabb.half_extents.z,
+                collider: Collider::capsule_y(
+                    self.model_aabb.half_extents.x / 4.0,
+                    self.model_aabb.half_extents.y / 2.0,
                 ),
                 rigid_body: RigidBody::KinematicVelocityBased,
                 rotation_constraints: LockedAxes::ROTATION_LOCKED,
