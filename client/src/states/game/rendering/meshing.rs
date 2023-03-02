@@ -654,18 +654,18 @@ pub fn calculate_coords(index: usize, tile_size: Vec2, tilesheet_size: Vec2) -> 
     // We need to start at 1.0 for calculations
     index += 1.0;
     let max_y = (tile_size.y) / tilesheet_size.y;
-    face_tex[0][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    // face_tex[0][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    face_tex[0][1] = 0.0;
-    face_tex[1][0] = (index * tile_size.x) / tilesheet_size.x;
-    // face_tex[1][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    face_tex[1][1] = 0.0;
     face_tex[2][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
-    // face_tex[2][1] = (index * tile_size.x) / tilesheet_size.x;
-    face_tex[2][1] = max_y;
+    // face_tex[0][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    face_tex[2][1] = 0.0;
     face_tex[3][0] = (index * tile_size.x) / tilesheet_size.x;
+    // face_tex[1][1] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    face_tex[3][1] = 0.0;
+    face_tex[0][0] = ((index - 1.0) * tile_size.x) / tilesheet_size.x;
+    // face_tex[2][1] = (index * tile_size.x) / tilesheet_size.x;
+    face_tex[0][1] = max_y;
+    face_tex[1][0] = (index * tile_size.x) / tilesheet_size.x;
     // face_tex[3][1] = (index * tile_size.x) / tilesheet_size.x;
-    face_tex[3][1] = max_y;
+    face_tex[1][1] = max_y;
     face_tex
 }
 fn ao_convert(ao: Vec<u8>) -> Vec<[f32; 4]> {
