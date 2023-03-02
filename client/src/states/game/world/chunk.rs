@@ -33,6 +33,11 @@ pub struct CreateChunkEvent {
     pub raw_chunk: RawChunk,
 }
 
+pub struct SetBlockEvent {
+    pub chunk_pos: IVec3,
+    pub voxel_pos: UVec3,
+    pub block_type: String,
+}
 pub struct UpdateChunkEvent {
     pub pos: IVec3,
 }
@@ -138,6 +143,78 @@ pub fn should_update_chunks(player_chunk: Res<PlayerChunk>) -> ShouldRun {
         ShouldRun::Yes
     } else {
         ShouldRun::No
+    }
+}
+
+pub fn set_block(
+    mut commands: Commands,
+    mut event: EventReader<SetBlockEvent>,
+    current_chunks: Res<CurrentChunks>,
+    mut chunks: Query<&mut ChunkComp>,
+) {
+    for evt in event.iter() {
+        if let Some(chunk_entity) = current_chunks.get_entity(evt.chunk_pos) {
+            if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
+                chunk.chunk_data.add_block_state(&evt.block_type);
+                chunk
+                    .chunk_data
+                    .set_block(evt.voxel_pos, evt.block_type.clone());
+
+                match evt.voxel_pos.x {
+                    1 => {
+                        if let Some(neighbor_chunk) =
+                            current_chunks.get_entity(evt.chunk_pos + IVec3::new(-1, 0, 0))
+                        {
+                            commands.entity(neighbor_chunk).insert(DirtyChunk);
+                        }
+                    }
+                    CHUNK_SIZE => {
+                        if let Some(neighbor_chunk) =
+                            current_chunks.get_entity(evt.chunk_pos + IVec3::new(1, 0, 0))
+                        {
+                            commands.entity(neighbor_chunk).insert(DirtyChunk);
+                        }
+                    }
+                    _ => {}
+                }
+                match evt.voxel_pos.y {
+                    1 => {
+                        if let Some(neighbor_chunk) =
+                            current_chunks.get_entity(evt.chunk_pos + IVec3::new(0, -1, 0))
+                        {
+                            commands.entity(neighbor_chunk).insert(DirtyChunk);
+                        }
+                    }
+                    CHUNK_SIZE => {
+                        if let Some(neighbor_chunk) =
+                            current_chunks.get_entity(evt.chunk_pos + IVec3::new(0, 1, 0))
+                        {
+                            commands.entity(neighbor_chunk).insert(DirtyChunk);
+                        }
+                    }
+                    _ => {}
+                }
+                match evt.voxel_pos.z {
+                    1 => {
+                        if let Some(neighbor_chunk) =
+                            current_chunks.get_entity(evt.chunk_pos + IVec3::new(0, 0, -1))
+                        {
+                            commands.entity(neighbor_chunk).insert(DirtyChunk);
+                        }
+                    }
+                    CHUNK_SIZE => {
+                        if let Some(neighbor_chunk) =
+                            current_chunks.get_entity(evt.chunk_pos + IVec3::new(0, 0, 1))
+                        {
+                            commands.entity(neighbor_chunk).insert(DirtyChunk);
+                        }
+                    }
+                    _ => {}
+                }
+
+                commands.entity(chunk_entity).insert(DirtyChunk);
+            }
+        }
     }
 }
 
@@ -364,6 +441,11 @@ impl Plugin for ChunkHandling {
                             .after(ChunkLoadingSystem::DirtyChunks),
                     )
                     .with_system(
+                        set_block
+                            .label(ChunkLoadingSystem::ReceiveChunks)
+                            .after(ChunkLoadingSystem::DirtyChunks),
+                    )
+                    .with_system(
                         clear_unloaded_chunks
                             .label(ChunkLoadingSystem::UpdateChunks)
                             .after(ChunkLoadingSystem::ReceiveChunks)
@@ -382,6 +464,7 @@ impl Plugin for ChunkHandling {
             )
             .add_system_to_stage(CoreStage::Last, delete_chunks)
             .add_event::<UpdateChunkEvent>()
+            .add_event::<SetBlockEvent>()
             .add_event::<CreateChunkEvent>();
     }
 }

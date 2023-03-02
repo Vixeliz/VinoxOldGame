@@ -3,15 +3,15 @@ use std::{collections::HashSet, io::Cursor, mem::size_of_val};
 use bevy::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::bundles::PlayerBundleBuilder,
+    game::{bundles::PlayerBundleBuilder, world::chunk::ChunkComp},
     networking::components::{
-        ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
+        self, ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages,
     },
 };
 use zstd::stream::copy_encode;
 
-use crate::game::world::chunk::{ChunkManager, LoadPoint};
+use crate::game::world::chunk::{ChunkManager, CurrentChunks, LoadPoint};
 
 use super::components::ServerLobby;
 
@@ -180,6 +180,53 @@ pub fn send_chunks(
                             sent_chunks.chunks.insert(chunk.pos.0);
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+pub fn block_sync(
+    mut server: ResMut<RenetServer>,
+    mut chunks: Query<&mut ChunkComp>,
+    current_chunks: Res<CurrentChunks>,
+) {
+    for client_id in server.clients_id().into_iter() {
+        while let Some(message) = server.receive_message(client_id, ClientChannel::Commands) {
+            if let Ok(sent_block) = bincode::deserialize::<components::Commands>(&message) {
+                match sent_block {
+                    components::Commands::SentBlock {
+                        chunk_pos,
+                        voxel_pos,
+                        block_type,
+                    } => {
+                        if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos.into()) {
+                            if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
+                                chunk.chunk_data.add_block_state(&block_type);
+                                chunk.chunk_data.set_block(
+                                    UVec3::new(
+                                        voxel_pos[0] as u32,
+                                        voxel_pos[1] as u32,
+                                        voxel_pos[2] as u32,
+                                    ),
+                                    block_type.clone(),
+                                );
+                                if let Ok(send_message) =
+                                    bincode::serialize(&ServerMessages::SentBlock {
+                                        chunk_pos,
+                                        voxel_pos,
+                                        block_type,
+                                    })
+                                {
+                                    server.broadcast_message(
+                                        ServerChannel::ServerMessages,
+                                        send_message,
+                                    );
+                                }
+                            }
+                        }
+                    }
+                    _ => {}
                 }
             }
         }

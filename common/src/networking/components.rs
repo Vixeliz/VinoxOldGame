@@ -61,7 +61,16 @@ pub enum LevelData {
 
 #[derive(Debug, Serialize, Deserialize, Component)]
 pub enum Commands {
-    Interact { entity: Entity, attack: bool },
+    Interact {
+        entity: Entity,
+        attack: bool,
+    },
+
+    SentBlock {
+        chunk_pos: [i32; 3],
+        voxel_pos: [u8; 3],
+        block_type: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Component)]
@@ -74,6 +83,11 @@ pub enum ServerMessages {
     },
     PlayerRemove {
         id: u64,
+    },
+    SentBlock {
+        chunk_pos: [i32; 3],
+        voxel_pos: [u8; 3],
+        block_type: String,
     },
 }
 

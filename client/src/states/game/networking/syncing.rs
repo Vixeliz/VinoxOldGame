@@ -18,8 +18,9 @@ use zstd::stream::copy_decode;
 use crate::{
     components::{Game, GameState},
     states::game::{
-        input::CameraController, networking::components::ControlledPlayer,
-        world::chunk::CreateChunkEvent,
+        input::CameraController,
+        networking::components::ControlledPlayer,
+        world::chunk::{CreateChunkEvent, SetBlockEvent},
     },
 };
 
@@ -38,6 +39,7 @@ pub fn client_sync_players(
     _meshes: ResMut<Assets<Mesh>>,
     _materials: ResMut<Assets<StandardMaterial>>,
     mut chunk_event: EventWriter<CreateChunkEvent>,
+    mut block_event: EventWriter<SetBlockEvent>,
 ) {
     let client_id = client.client_id();
     while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
@@ -99,6 +101,19 @@ pub fn client_sync_players(
                     network_mapping.0.remove(&server_entity);
                 }
             }
+            ServerMessages::SentBlock {
+                chunk_pos,
+                voxel_pos,
+                block_type,
+            } => block_event.send(SetBlockEvent {
+                chunk_pos: chunk_pos.into(),
+                voxel_pos: UVec3::new(
+                    voxel_pos[0] as u32,
+                    voxel_pos[1] as u32,
+                    voxel_pos[2] as u32,
+                ),
+                block_type,
+            }),
         }
     }
 

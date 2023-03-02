@@ -80,6 +80,7 @@ impl Plugin for GamePlugin {
             .add_system(panic_on_error_system)
             .add_system(syncing::server_update_system)
             .add_fixed_timestep_system("network_update", 0, syncing::server_network_sync)
+            .add_fixed_timestep_system("network_update", 0, syncing::block_sync)
             .add_fixed_timestep_system("network_update", 0, syncing::send_chunks)
             .add_startup_system(setup)
             .insert_resource(ServerLobby::default());

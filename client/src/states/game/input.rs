@@ -1,7 +1,12 @@
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext, Velocity};
-use common::game::world::chunk::{
-    world_to_voxel, Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE,
+use bevy_renet::renet::RenetClient;
+use common::{
+    game::world::chunk::{
+        world_to_voxel, Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility,
+        CHUNK_SIZE,
+    },
+    networking::components::{self, ClientChannel},
 };
 
 use super::{
@@ -240,6 +245,7 @@ pub fn interact(
     windows: ResMut<Windows>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    mut client: ResMut<RenetClient>,
 ) {
     let mouse_left = mouse_button_input.just_pressed(MouseButton::Left);
     let mouse_right = mouse_button_input.just_pressed(MouseButton::Right);
@@ -274,8 +280,24 @@ pub fn interact(
                     if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
                         if mouse_right {
                             chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
+                            let send_block = components::Commands::SentBlock {
+                                chunk_pos: pos.0.into(),
+                                voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
+                                block_type: "vinoxdirt".to_string(),
+                            };
+                            let input_message = bincode::serialize(&send_block).unwrap();
+
+                            client.send_message(ClientChannel::Commands, input_message);
                         } else {
                             chunk.chunk_data.set_block(pos.1, "air".to_string());
+                            let send_block = components::Commands::SentBlock {
+                                chunk_pos: pos.0.into(),
+                                voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
+                                block_type: "air".to_string(),
+                            };
+                            let input_message = bincode::serialize(&send_block).unwrap();
+
+                            client.send_message(ClientChannel::Commands, input_message);
                         }
                         match pos.1.x {
                             1 => {
