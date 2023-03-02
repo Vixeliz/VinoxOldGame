@@ -185,7 +185,7 @@ pub fn lerp_new_location(
                                 transform,
                                 EaseMethod::Linear,
                                 EasingType::Once {
-                                    duration: Duration::from_millis(150),
+                                    duration: Duration::from_millis(10), //TODO: Lerp based off of last packet received and changed distance
                                 },
                             ));
                     }
