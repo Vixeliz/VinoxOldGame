@@ -1,5 +1,6 @@
 use std::{io::Cursor, time::Duration};
 
+use belly::prelude::*;
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*};
 use bevy_atmosphere::prelude::*;
 use bevy_easings::{Ease, EaseMethod, EasingType};
@@ -20,7 +21,7 @@ use crate::{
     states::game::{
         input::CameraController,
         networking::components::ControlledPlayer,
-        world::chunk::{CreateChunkEvent, SetBlockEvent},
+        world::chunk::{CreateChunkEvent, PlayerChunk, SetBlockEvent},
     },
 };
 
@@ -32,6 +33,7 @@ pub fn client_sync_players(
     mut cmd2: Commands,
     mut client: ResMut<RenetClient>,
     mut lobby: ResMut<ClientLobby>,
+    player_chunk: Res<PlayerChunk>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut entity_buffer: ResMut<EntityBuffer>,
     asset_server: Res<AssetServer>,
@@ -74,6 +76,11 @@ pub fn client_sync_players(
                     client_entity
                         .insert(player_builder.build(translation.into(), id, true))
                         .insert(ControlledPlayer);
+                    cmd2.add(eml! {
+                        <body s:padding="50px" s:margin-left="5px" s:justify-content="flex-start" s:align-items="flex-start">
+                            "ChunkPos: "{from!(PlayerChunk:chunk_pos | fmt.c("{c}"))}
+                        </body>
+                    });
                 } else {
                     println!("Player {id} connected.");
                     client_entity.insert(player_builder.build(translation.into(), id, false));

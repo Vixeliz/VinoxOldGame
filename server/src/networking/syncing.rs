@@ -11,7 +11,10 @@ use common::{
 };
 use zstd::stream::copy_encode;
 
-use crate::game::world::chunk::{ChunkManager, CurrentChunks, LoadPoint};
+use crate::game::world::{
+    chunk::{ChunkManager, CurrentChunks, LoadPoint},
+    storage::{create_database, insert_chunk},
+};
 
 use super::components::ServerLobby;
 
@@ -211,6 +214,14 @@ pub fn block_sync(
                                     ),
                                     block_type.clone(),
                                 );
+                                if chunk.pos.0 == IVec3::new(0, 1, 0) {
+                                    create_database("world.db".to_string());
+                                    insert_chunk(
+                                        chunk.pos.0,
+                                        &chunk.chunk_data,
+                                        "world.db".to_string(),
+                                    );
+                                }
                                 if let Ok(send_message) =
                                     bincode::serialize(&ServerMessages::SentBlock {
                                         chunk_pos,

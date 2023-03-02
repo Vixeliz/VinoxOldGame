@@ -36,7 +36,7 @@ pub fn setup(mut commands: Commands) {
         brightness: 1.0,
     });
     commands.add(eml! {
-        <body s:padding="50px">
+        <body s:padding="50px" s:position-type="absolute">
             <img src="crosshair.png"/>
         </body>
     });

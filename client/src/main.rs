@@ -37,7 +37,7 @@ fn main() {
         )
         .add_plugin(BellyPlugin)
         .add_plugin(EasingsPlugin)
-        .add_plugin(WorldInspectorPlugin)
+        // .add_plugin(WorldInspectorPlugin)
         .add_plugin(RenetClientPlugin::default())
         .add_fixed_timestep_after_stage(
             CoreStage::Update,

@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use belly::prelude::*;
 use bevy::{ecs::schedule::ShouldRun, prelude::*};
 use bevy_rapier3d::prelude::Collider;
 
