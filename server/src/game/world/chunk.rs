@@ -160,15 +160,14 @@ pub fn destroy_chunks(
 
 pub fn clear_unloaded_chunks(
     mut commands: Commands,
-    current_chunks: ResMut<CurrentChunks>,
+    chunks: Query<(&ChunkComp, Entity)>,
     load_points: Query<&LoadPoint>,
     view_distance: Res<ViewDistance>,
 ) {
-    for chunk_pos in current_chunks.chunks.keys() {
-        let entity = current_chunks.get_entity(*chunk_pos).unwrap();
+    for (chunk, entity) in chunks.iter() {
         for load_point in load_points.iter() {
             if let Some(loaded) = load_point.is_in_radius(
-                *chunk_pos,
+                chunk.pos.0,
                 IVec2::new(-view_distance.horizontal, -view_distance.vertical),
                 IVec2::new(view_distance.horizontal, view_distance.vertical),
             ) {
