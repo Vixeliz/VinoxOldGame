@@ -1,4 +1,5 @@
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
+use bevy_egui::EguiContext;
 use bevy_rapier3d::prelude::{
     KinematicCharacterController, KinematicCharacterControllerOutput, QueryFilter,
     RapierConfiguration, RapierContext, Velocity,
@@ -11,6 +12,7 @@ use common::{
     },
     networking::components::{self, ClientChannel},
 };
+use renet_visualizer::{RenetClientVisualizer, RenetVisualizerStyle};
 
 use super::{
     networking::components::ControlledPlayer,
@@ -384,5 +386,21 @@ pub fn interact(
                 }
             }
         }
+    }
+}
+
+pub fn update_visualizer_system(
+    mut egui_context: ResMut<EguiContext>,
+    mut visualizer: ResMut<RenetClientVisualizer<200>>,
+    client: Res<RenetClient>,
+    mut show_visualizer: Local<bool>,
+    keyboard_input: Res<Input<KeyCode>>,
+) {
+    visualizer.add_network_info(client.network_info());
+    if keyboard_input.just_pressed(KeyCode::F1) {
+        *show_visualizer = !*show_visualizer;
+    }
+    if *show_visualizer {
+        visualizer.show_window(egui_context.ctx_mut());
     }
 }

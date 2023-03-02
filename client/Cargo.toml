@@ -35,7 +35,7 @@ mlua = {workspace=true}
 ron = {workspace=true}
 bevy_easings = "0.9.1"
 bevy_rapier3d = {workspace = true}
-bevy-inspector-egui = "0.17.0"
+bevy_egui = "0.17.1"
 directories = {workspace=true}
 walkdir = "2.3.2"
 zstd = "0.12.3"
@@ -43,4 +43,5 @@ bimap = "0.6.2"
 futures-lite = "1.12.0"
 bevy_atmosphere = "0.5.0"
 itertools = "0.10.5"
-# bevy-vfx-bag = "0.1.0"
+renet_visualizer = { version="0.0.3", features=["bevy"] }
+# bevy-vfx-bag = {git="https://github.com/torsteingrindvik/bevy-vfx-bag.git"}

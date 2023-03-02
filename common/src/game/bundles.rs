@@ -42,11 +42,6 @@ impl PlayerBundleBuilder {
             self.default_model.clone()
         };
 
-        let visibility = if local {
-            Visibility::INVISIBLE
-        } else {
-            Visibility::VISIBLE
-        };
         PlayerBundle {
             collider: ColliderBundle {
                 collider: Collider::capsule_y(
@@ -65,7 +60,6 @@ impl PlayerBundleBuilder {
             scene_bundle: SceneBundle {
                 scene: handle,
                 transform: Transform::from_translation(translation),
-                visibility,
                 ..default()
             },
             ..Default::default()

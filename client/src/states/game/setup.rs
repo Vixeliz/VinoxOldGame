@@ -10,9 +10,11 @@ use super::world::chunk::ChunkHandling;
 use belly::prelude::*;
 use bevy::prelude::*;
 use bevy_atmosphere::prelude::*;
+use bevy_egui::EguiPlugin;
 use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
 use common::networking::components::EntityBuffer;
 use iyes_loopless::prelude::*;
+use renet_visualizer::{RenetClientVisualizer, RenetVisualizerStyle};
 
 use crate::{
     components::{Game, GameState},
@@ -73,6 +75,13 @@ impl Plugin for GamePlugin {
             .add_system(input::interact.run_in_state(GameState::Game))
             .add_system(meshing::process_queue.run_in_state(GameState::Game))
             .add_system(meshing::process_task.run_in_state(GameState::Game))
+            .insert_resource(RenetClientVisualizer::<200>::new(
+                RenetVisualizerStyle::default(),
+            ))
+            .add_plugin(EguiPlugin)
+            .add_system(
+                crate::states::game::input::update_visualizer_system.run_in_state(GameState::Game),
+            )
             .add_event::<crate::states::game::rendering::meshing::MeshChunkEvent>();
     }
 }
