@@ -241,7 +241,9 @@ pub fn interact(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    if mouse_button_input.just_pressed(MouseButton::Left) {
+    let mouse_left = mouse_button_input.just_pressed(MouseButton::Left);
+    let mouse_right = mouse_button_input.just_pressed(MouseButton::Right);
+    if mouse_left || mouse_right {
         if let Ok((camera, camera_transform)) = camera_query.get_single() {
             let ray = camera
                 .viewport_to_world(
@@ -262,24 +264,71 @@ pub fn interact(
                 QueryFilter::only_fixed(),
             );
             if let Some((_, toi)) = hit {
-                let pos = world_to_voxel(toi.point);
-                commands.spawn(PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::Icosphere {
-                        radius: 0.45,
-                        subdivisions: 32,
-                    })),
-                    material: materials.add(StandardMaterial {
-                        base_color: Color::RED,
-                        // vary key PBR parameters on a grid of spheres to show the effect
-                        unlit: true,
-                        ..default()
-                    }),
-                    transform: Transform::from_translation(toi.point),
-                    ..default()
-                });
+                let point = if mouse_right {
+                    toi.point + (toi.normal / Vec3::splat(2.0))
+                } else {
+                    toi.point - (toi.normal / Vec3::splat(2.0))
+                };
+                let pos = world_to_voxel(point);
                 if let Some(chunk_entity) = current_chunks.get_entity(pos.0) {
                     if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
-                        chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
+                        if mouse_right {
+                            chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
+                        } else {
+                            chunk.chunk_data.set_block(pos.1, "air".to_string());
+                        }
+                        match pos.1.x {
+                            1 => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(-1, 0, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            CHUNK_SIZE => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(1, 0, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            _ => {}
+                        }
+                        match pos.1.y {
+                            1 => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, -1, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            CHUNK_SIZE => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, 1, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            _ => {}
+                        }
+                        match pos.1.z {
+                            1 => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, 0, -1))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            CHUNK_SIZE => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, 0, 1))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            _ => {}
+                        }
+
                         commands.entity(chunk_entity).insert(DirtyChunk);
                     }
                 }
