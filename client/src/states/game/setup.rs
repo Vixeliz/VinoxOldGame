@@ -61,6 +61,7 @@ impl Plugin for GamePlugin {
             )
             .add_system(syncing::lerp_new_location.run_in_state(GameState::Game))
             .add_system(input::camera_controller.run_in_state(GameState::Game))
+            .add_system(input::interact.run_in_state(GameState::Game))
             .add_system(meshing::process_queue.run_in_state(GameState::Game))
             .add_system(meshing::process_task.run_in_state(GameState::Game))
             .add_event::<crate::states::game::rendering::meshing::MeshChunkEvent>();

@@ -23,6 +23,11 @@ pub struct RenderedChunk {
     // pub collider: Collider,
 }
 
+#[derive(Bundle)]
+pub struct ChunkCollider {
+    pub collider: Collider,
+}
+
 pub struct CreateChunkEvent {
     pub pos: IVec3,
     pub raw_chunk: RawChunk,

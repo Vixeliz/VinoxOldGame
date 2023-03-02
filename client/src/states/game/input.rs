@@ -1,10 +1,12 @@
-use bevy::{input::mouse::MouseMotion, prelude::*};
-use bevy_rapier3d::prelude::Velocity;
-use common::game::world::chunk::ChunkComp;
+use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
+use bevy_rapier3d::prelude::{QueryFilter, RapierContext, Velocity};
+use common::game::world::chunk::{
+    world_to_voxel, Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility,
+};
 
 use super::{
     networking::components::ControlledPlayer,
-    world::chunk::{CurrentChunks, DirtyChunk, PlayerChunk},
+    world::chunk::{world_to_chunk, CurrentChunks, DirtyChunk, PlayerChunk, ViewDistance},
 };
 // pub fn move_player(
 //     mut velocity_query: Query<&mut Velocity, With<ControlledPlayer>>,
@@ -44,7 +46,6 @@ pub struct CameraController {
     pub key_up: KeyCode,
     pub key_down: KeyCode,
     pub key_run: KeyCode,
-    pub mouse_key_enable_mouse: MouseButton,
     pub keyboard_key_enable_mouse: KeyCode,
     pub walk_speed: f32,
     pub run_speed: f32,
@@ -68,7 +69,7 @@ impl CameraController {
     {:?} - Up
     {:?} - Down
     {:?} - Run
-    {:?}/{:?} - EnableMouse
+    {:?} - EnableMouse
 ",
             self.key_forward,
             self.key_back,
@@ -77,7 +78,6 @@ impl CameraController {
             self.key_up,
             self.key_down,
             self.key_run,
-            self.mouse_key_enable_mouse,
             self.keyboard_key_enable_mouse,
         );
         self
@@ -97,7 +97,6 @@ impl Default for CameraController {
             key_up: KeyCode::Space,
             key_down: KeyCode::C,
             key_run: KeyCode::LShift,
-            mouse_key_enable_mouse: MouseButton::Left,
             keyboard_key_enable_mouse: KeyCode::M,
             walk_speed: 500.0,
             run_speed: 1500.0,
@@ -120,6 +119,7 @@ pub fn camera_controller(
     player_chunk: Res<PlayerChunk>,
     current_chunks: Res<CurrentChunks>,
     mut commands: Commands,
+    mut windows: ResMut<Windows>,
 ) {
     let dt = time.delta_seconds();
 
@@ -129,6 +129,10 @@ pub fn camera_controller(
             options.yaw = yaw;
             options.pitch = pitch;
             options.initialized = true;
+            *move_toggled = !*move_toggled;
+            let window = windows.get_primary_mut().unwrap();
+            window.set_cursor_grab_mode(CursorGrabMode::Locked);
+            window.set_cursor_visibility(false);
         }
         if !options.enabled {
             return;
@@ -158,8 +162,17 @@ pub fn camera_controller(
         if key_input.pressed(options.key_down) {
             axis_input.y -= 1.0;
         }
+
         if key_input.just_pressed(options.keyboard_key_enable_mouse) {
             *move_toggled = !*move_toggled;
+            let window = windows.get_primary_mut().unwrap();
+            if *move_toggled {
+                window.set_cursor_grab_mode(CursorGrabMode::Locked);
+                window.set_cursor_visibility(false);
+            } else {
+                window.set_cursor_grab_mode(CursorGrabMode::None);
+                window.set_cursor_visibility(true);
+            }
         }
 
         // Apply movement update
@@ -186,7 +199,7 @@ pub fn camera_controller(
 
         // Handle mouse input
         let mut mouse_delta = Vec2::ZERO;
-        if mouse_button_input.pressed(options.mouse_key_enable_mouse) || *move_toggled {
+        if *move_toggled {
             for mouse_event in mouse_events.iter() {
                 mouse_delta += mouse_event.delta;
             }
@@ -211,6 +224,50 @@ pub fn camera_controller(
         }
         if let Ok(mut player_velocity) = velocity_query.get_single_mut() {
             player_velocity.linvel = translation_delta;
+        }
+    }
+}
+
+pub fn interact(
+    mut commands: Commands,
+    mut chunks: Query<&mut ChunkComp>,
+    mouse_button_input: Res<Input<MouseButton>>,
+    current_chunks: Res<CurrentChunks>,
+    camera_query: Query<(&Camera, &GlobalTransform)>,
+    view_distance: Res<ViewDistance>,
+    loadable_types: Res<LoadableTypes>,
+    rapier_context: Res<RapierContext>,
+    windows: ResMut<Windows>,
+) {
+    if mouse_button_input.just_pressed(MouseButton::Left) {
+        if let Ok((camera, camera_transform)) = camera_query.get_single() {
+            // let (ray_pos, ray_dir) =
+            //     ray_from_mouse_position(windows.get_primary().unwrap(), camera, camera_transform);
+            let ray = camera
+                .viewport_to_world(
+                    camera_transform,
+                    windows
+                        .get_primary()
+                        .unwrap()
+                        .cursor_position()
+                        .unwrap_or(Vec2::new(0.0, 0.0)),
+                )
+                .unwrap();
+            // Then cast the ray.
+            let hit = rapier_context.cast_ray_and_get_normal(
+                ray.origin,
+                ray.direction,
+                100.0,
+                true,
+                QueryFilter::only_fixed(),
+            );
+            if let Some((entity, toi)) = hit {
+                if let Ok(mut chunk) = chunks.get_mut(entity) {
+                    let pos = world_to_voxel(toi.point);
+                    chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
+                    commands.entity(entity).insert(DirtyChunk);
+                }
+            }
         }
     }
 }

@@ -11,7 +11,9 @@ use futures_lite::future;
 use itertools::Itertools;
 
 use crate::states::{
-    game::world::chunk::{ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance},
+    game::world::chunk::{
+        ChunkCollider, ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance,
+    },
     loading::LoadableAssets,
 };
 
@@ -450,7 +452,7 @@ pub fn build_mesh(
 #[derive(Component)]
 pub struct MeshedChunk {
     chunk_mesh: Mesh,
-    // collider: Collider,
+    collider: Collider,
     pos: IVec3,
 }
 
@@ -470,31 +472,35 @@ pub fn process_task(
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
-                commands.entity(chunk_entity).insert(RenderedChunk {
-                    // collider: chunk.collider.clone(),
-                    mesh: PbrBundle {
-                        mesh: meshes.add(chunk.chunk_mesh.clone()),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::WHITE,
-                            base_color_texture: Some(
-                                texture_atlas
-                                    .get(&loadable_assets.block_atlas)
-                                    .unwrap()
-                                    .texture
-                                    .clone(),
-                            ),
-                            alpha_mode: AlphaMode::Mask(1.0),
-                            perceptual_roughness: 1.0,
-                            ..default()
-                        }),
-                        transform: Transform::from_translation(Vec3::new(
-                            (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
-                            (chunk.pos[1] * (CHUNK_SIZE) as i32) as f32,
-                            (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
-                        )),
-                        ..Default::default()
+                commands.entity(chunk_entity).insert((
+                    RenderedChunk {
+                        mesh: PbrBundle {
+                            mesh: meshes.add(chunk.chunk_mesh.clone()),
+                            material: materials.add(StandardMaterial {
+                                base_color: Color::WHITE,
+                                base_color_texture: Some(
+                                    texture_atlas
+                                        .get(&loadable_assets.block_atlas)
+                                        .unwrap()
+                                        .texture
+                                        .clone(),
+                                ),
+                                alpha_mode: AlphaMode::Mask(1.0),
+                                perceptual_roughness: 1.0,
+                                ..default()
+                            }),
+                            transform: Transform::from_translation(Vec3::new(
+                                (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
+                                (chunk.pos[1] * (CHUNK_SIZE) as i32) as f32,
+                                (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
+                            )),
+                            ..Default::default()
+                        },
                     },
-                });
+                    ChunkCollider {
+                        collider: chunk.collider.clone(),
+                    },
+                ));
 
                 commands.entity(entity).despawn_recursive();
             } else {
@@ -592,26 +598,25 @@ pub fn process_queue(
                         uvs.push(face_coords[2]);
                         uvs.push(face_coords[3]);
                     }
-                    // let col_vertices = positions
-                    //     .iter()
-                    //     .cloned()
-                    //     .map(Vec3::from_array)
-                    //     .collect::<Vec<_>>();
+                    let col_vertices = positions
+                        .iter()
+                        .cloned()
+                        .map(Vec3::from_array)
+                        .collect::<Vec<_>>();
 
-                    // let col_indices = indices
-                    //     .iter()
-                    //     .cloned()
-                    //     .tuples::<(u32, u32, u32)>()
-                    //     .map(|(x, y, z)| [x, y, z])
-                    //     .collect::<Vec<_>>();
+                    let col_indices = indices
+                        .iter()
+                        .cloned()
+                        .tuples::<(u32, u32, u32)>()
+                        .map(|(x, y, z)| [x, y, z])
+                        .collect::<Vec<_>>();
                     let final_ao = ao_convert(ao);
                     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-                    // let collider = if !indices.is_empty() {
-                    //     // Collider::trimesh(col_vertices, col_indices)
-                    //     Collider::cuboid(0.0, 0.0, 0.0)
-                    // } else {
-                    //     Collider::cuboid(0.0, 0.0, 0.0)
-                    // };
+                    let collider = if !indices.is_empty() {
+                        Collider::trimesh(col_vertices, col_indices)
+                    } else {
+                        Collider::cuboid(0.0, 0.0, 0.0)
+                    };
                     mesh.set_indices(Some(Indices::U32(indices)));
                     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
                     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
@@ -621,7 +626,7 @@ pub fn process_queue(
                     MeshedChunk {
                         chunk_mesh: mesh,
                         pos: chunk_pos,
-                        // collider,
+                        collider,
                     }
                 })),
             )

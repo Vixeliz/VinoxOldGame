@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use bevy_rapier3d::prelude::Collider;
 use serde::{Deserialize, Serialize};
 
 use serde_big_array::BigArray;
@@ -150,7 +151,12 @@ impl LightChunk {
         let index = RawChunk::linearize(UVec3::new(x, y, z));
         self.voxels[index]
     }
-    pub fn calculate_light(&mut self, raw_chunk: &RawChunk, loadable_types: &LoadableTypes) {
+    pub fn calculate_light(
+        &mut self,
+        raw_chunk: &RawChunk,
+        neighbors: [&RawChunk; 6],
+        loadable_types: &LoadableTypes,
+    ) {
         for i in 0..raw_chunk.voxels.len() {
             let (x, y, z) = RawChunk::delinearize(i);
             if (x > 0 && x < (CHUNK_BOUND) as u32)
@@ -159,6 +165,9 @@ impl LightChunk {
             {
                 if let Some(light_val) = raw_chunk.get_data(i, loadable_types) {
                     let light_val = light_val.light_val;
+                    if light_val > 0 {
+                        for l in 0..light_val {}
+                    }
                 }
             }
         }
@@ -174,6 +183,25 @@ impl<'s> Default for RawChunk {
         raw_chunk.palette.push("air".to_string());
         raw_chunk
     }
+}
+
+pub fn world_to_chunk(pos: Vec3) -> IVec3 {
+    IVec3::new(
+        (pos.x / (CHUNK_SIZE as f32)).floor() as i32,
+        (pos.y / (CHUNK_SIZE as f32)).floor() as i32,
+        (pos.z / (CHUNK_SIZE as f32)).floor() as i32,
+    )
+}
+
+pub fn world_to_voxel(voxel_pos: Vec3) -> (IVec3, UVec3) {
+    (
+        world_to_chunk(voxel_pos),
+        UVec3::new(
+            voxel_pos.x.rem_euclid(CHUNK_SIZE as f32).floor() as u32,
+            voxel_pos.y.rem_euclid(CHUNK_SIZE as f32).floor() as u32,
+            voxel_pos.z.rem_euclid(CHUNK_SIZE as f32).floor() as u32,
+        ),
+    )
 }
 
 impl Chunk for RawChunk {

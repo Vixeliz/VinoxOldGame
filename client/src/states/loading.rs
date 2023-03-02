@@ -1,4 +1,5 @@
 use bevy::{asset::LoadState, math::Vec3A, prelude::*, render::primitives::Aabb};
+use bevy_rapier3d::render::RapierDebugRenderPlugin;
 use common::{
     game::{
         bundles::{AssetsLoading, PlayerBundleBuilder},
