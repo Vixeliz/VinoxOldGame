@@ -197,9 +197,9 @@ pub fn world_to_voxel(voxel_pos: Vec3) -> (IVec3, UVec3) {
     (
         world_to_chunk(voxel_pos),
         UVec3::new(
-            voxel_pos.x.rem_euclid(CHUNK_SIZE as f32).floor() as u32,
-            voxel_pos.y.rem_euclid(CHUNK_SIZE as f32).floor() as u32,
-            voxel_pos.z.rem_euclid(CHUNK_SIZE as f32).floor() as u32,
+            voxel_pos.x.rem_euclid(CHUNK_SIZE as f32).floor() as u32 + 1,
+            voxel_pos.y.rem_euclid(CHUNK_SIZE as f32).floor() as u32 + 1,
+            voxel_pos.z.rem_euclid(CHUNK_SIZE as f32).floor() as u32 + 1,
         ),
     )
 }
