@@ -62,12 +62,14 @@ pub fn switch(
             if client.is_connected() {
                 let mut texture_atlas_builder = TextureAtlasBuilder::default();
                 for handle in loadable_assets.block_textures.values() {
-                    let Some(texture) = textures.get(&handle[0]) else {
-            warn!("{:?} did not resolve to an `Image` asset.", asset_server.get_handle_path(&handle[0]));
+                    for index in 0..handle.len() {
+                        let Some(texture) = textures.get(&handle[index]) else {
+            warn!("{:?} did not resolve to an `Image` asset.", asset_server.get_handle_path(&handle[index]));
             continue;
         };
 
-                    texture_atlas_builder.add_texture(handle[0].clone(), texture);
+                        texture_atlas_builder.add_texture(handle[index].clone(), texture);
+                    }
                 }
 
                 let texture_atlas = texture_atlas_builder.finish(&mut textures).unwrap();
@@ -145,6 +147,9 @@ pub fn load_blocks(
     if !(*has_ran) && loadable_types.is_changed() {
         for block_pair in &loadable_types.blocks {
             let block = block_pair.1;
+            let mut texture_array: Vec<Handle<Image>> = Vec::with_capacity(6);
+            texture_array.resize(6, Handle::default());
+            let mut block_identifier = String::new();
             for texture_path_and_type in block.textures.iter() {
                 let mut path = "blocks/".to_string();
                 path.push_str(block.block_name.as_str());
@@ -152,20 +157,43 @@ pub fn load_blocks(
                 path.push_str(texture_path_and_type.1);
                 let texture_handle: Handle<Image> = asset_server.load(path.as_str());
                 loading.0.push(texture_handle.clone_untyped());
-                let mut block_identifier = block.namespace.to_owned();
+                block_identifier = block.namespace.to_owned();
                 block_identifier.push_str(&block.block_name.to_owned());
-                let texture_array = [
-                    texture_handle.clone(),
-                    texture_handle.clone(),
-                    texture_handle.clone(),
-                    texture_handle.clone(),
-                    texture_handle.clone(),
-                    texture_handle.clone(),
-                ];
-                loadable_assets
-                    .block_textures
-                    .insert(block_identifier, texture_array);
+                match texture_path_and_type.0.as_str() {
+                    "up" => {
+                        texture_array[0] = texture_handle;
+                    }
+                    "down" => {
+                        texture_array[1] = texture_handle;
+                    }
+                    "left" => {
+                        texture_array[2] = texture_handle;
+                    }
+                    "right" => {
+                        texture_array[3] = texture_handle;
+                    }
+                    "front" => {
+                        texture_array[4] = texture_handle;
+                    }
+                    "back" => {
+                        texture_array[5] = texture_handle;
+                    }
+                    _ => {}
+                }
             }
+            let texture_array: [Handle<Image>; 6] =
+                texture_array
+                    .try_into()
+                    .unwrap_or_else(|texture_array: Vec<Handle<Image>>| {
+                        panic!(
+                            "Expected a Vec of length {} but it was {}",
+                            6,
+                            texture_array.len()
+                        )
+                    });
+            loadable_assets
+                .block_textures
+                .insert(block_identifier, texture_array);
         }
         *has_ran = true;
     }

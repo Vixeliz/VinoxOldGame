@@ -571,7 +571,15 @@ pub fn process_queue(
                         normals.extend_from_slice(&face.normals());
                         ao.extend_from_slice(&calculated_ao);
 
-                        let texture_index = clone_atlas.get_texture_index(
+                        let matched_index = match (face.side.axis, face.side.positive) {
+                            (Axis::X, false) => 2,
+                            (Axis::X, true) => 3,
+                            (Axis::Y, false) => 1,
+                            (Axis::Y, true) => 0,
+                            (Axis::Z, false) => 5,
+                            (Axis::Z, true) => 4,
+                        };
+                        if let Some(texture_index) = clone_atlas.get_texture_index(
                             &cloned_assets
                                 .block_textures
                                 .get(
@@ -586,17 +594,20 @@ pub fn process_queue(
                                         )
                                         .unwrap(),
                                 )
-                                .unwrap()[0],
-                        );
-                        let face_coords = calculate_coords(
-                            texture_index.unwrap(),
-                            Vec2::new(16.0, 16.0),
-                            clone_atlas.size,
-                        );
-                        uvs.push(face_coords[0]);
-                        uvs.push(face_coords[1]);
-                        uvs.push(face_coords[2]);
-                        uvs.push(face_coords[3]);
+                                .unwrap()[matched_index],
+                        ) {
+                            let face_coords = calculate_coords(
+                                texture_index,
+                                Vec2::new(16.0, 16.0),
+                                clone_atlas.size,
+                            );
+                            uvs.push(face_coords[0]);
+                            uvs.push(face_coords[1]);
+                            uvs.push(face_coords[2]);
+                            uvs.push(face_coords[3]);
+                        } else {
+                            uvs.extend_from_slice(&face.uvs(false, false));
+                        }
                     }
                     let col_vertices = positions
                         .iter()
