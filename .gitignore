@@ -3,3 +3,6 @@ run.sh
 .DS_Store
 *.DS_Store
 *.tracy
+*.db
+*.db-wal
+*.db-shm
