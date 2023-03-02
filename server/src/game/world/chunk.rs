@@ -146,15 +146,37 @@ pub fn destroy_chunks(
     mut commands: Commands,
     mut current_chunks: ResMut<CurrentChunks>,
     remove_chunks: Query<&ChunkPos, With<RemoveChunk>>,
-    mut player_query: Query<&mut SentChunks>,
 ) {
     for chunk in remove_chunks.iter() {
-        for mut player in player_query.iter_mut() {
-            player.chunks.remove(&chunk.0);
-        }
         commands
             .entity(current_chunks.remove_entity(chunk.0).unwrap())
             .despawn_recursive();
+    }
+}
+
+pub fn unsend_chunks(
+    mut load_points: Query<(&LoadPoint, &mut SentChunks)>,
+    view_distance: Res<ViewDistance>,
+    chunks: Query<&ChunkComp>,
+) {
+    for (point, mut sent_chunks) in load_points.iter_mut() {
+        for chunk in chunks.iter() {
+            for x in -view_distance.horizontal..view_distance.horizontal {
+                for y in -view_distance.vertical..view_distance.vertical {
+                    for z in -view_distance.horizontal..view_distance.horizontal {
+                        if let Some(loaded) = point.is_in_radius(
+                            chunk.pos.0,
+                            IVec2::new(-view_distance.horizontal, -view_distance.vertical),
+                            IVec2::new(view_distance.horizontal, view_distance.vertical),
+                        ) {
+                            if !loaded {
+                                sent_chunks.chunks.remove(&chunk.pos.0);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -268,6 +290,7 @@ impl Plugin for ChunkGenerationPlugin {
                     ),
             )
             .add_system_to_stage(CoreStage::Last, destroy_chunks)
+            .add_system_to_stage(CoreStage::Last, unsend_chunks)
             .add_system(process_task);
     }
 }

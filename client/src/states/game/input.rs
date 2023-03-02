@@ -144,8 +144,9 @@ pub fn camera_controller(
         }
 
         if key_input.just_pressed(KeyCode::E) {
-            let chunk_entity = current_chunks.get_entity(player_chunk.chunk_pos).unwrap();
-            commands.entity(chunk_entity).insert(DirtyChunk);
+            if let Some(chunk_entity) = current_chunks.get_entity(player_chunk.chunk_pos) {
+                commands.entity(chunk_entity).insert(DirtyChunk);
+            }
         }
         // Handle key input
         let mut axis_input = Vec3::ZERO;
