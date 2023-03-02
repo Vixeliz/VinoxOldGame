@@ -1,4 +1,7 @@
-use std::{io::Cursor, sync::RwLock};
+use std::{
+    io::Cursor,
+    sync::{Arc, Mutex, RwLock},
+};
 
 use bevy::prelude::*;
 use common::game::world::chunk::RawChunk;
@@ -8,10 +11,10 @@ use zstd::stream::{copy_decode, copy_encode};
 #[derive(Resource)]
 pub struct WorldDatabase {
     pub name: String,
+    pub connection: Arc<Mutex<Connection>>,
 }
 
-pub fn create_database(name: String) {
-    let database = Connection::open(name.as_str()).unwrap();
+pub fn create_database(database: &Connection) {
     database
         .execute(
             " create table if not exists blocks (
@@ -26,8 +29,7 @@ pub fn create_database(name: String) {
         .unwrap();
 }
 
-pub fn insert_chunk(chunk_pos: IVec3, raw_chunk: &RawChunk, name: String) {
-    let database = Connection::open(name.as_str()).unwrap();
+pub fn insert_chunk(chunk_pos: IVec3, raw_chunk: &RawChunk, database: &Connection) {
     if let Ok(raw_chunk_bin) = bincode::serialize(raw_chunk) {
         let mut final_chunk = Cursor::new(raw_chunk_bin);
         let mut output = Cursor::new(Vec::new());
@@ -46,8 +48,7 @@ pub fn insert_chunk(chunk_pos: IVec3, raw_chunk: &RawChunk, name: String) {
     }
 }
 
-pub fn load_chunk(chunk_pos: IVec3, name: String) -> Option<RawChunk> {
-    let database = Connection::open(name.as_str()).unwrap();
+pub fn load_chunk(chunk_pos: IVec3, database: &Connection) -> Option<RawChunk> {
     let stmt = database.prepare(
         "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
     );

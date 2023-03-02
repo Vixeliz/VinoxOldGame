@@ -2,7 +2,7 @@ use crate::networking::syncing::SentChunks;
 
 use super::{
     generation::generate_chunk,
-    storage::{create_database, insert_chunk, load_chunk},
+    storage::{create_database, insert_chunk, load_chunk, WorldDatabase},
 };
 use bevy::{
     ecs::{schedule::ShouldRun, system::SystemParam},
@@ -131,14 +131,16 @@ pub fn generate_chunks_world(
     mut chunk_queue: ResMut<ChunkQueue>,
     mut current_chunks: ResMut<CurrentChunks>,
     mut commands: Commands,
+    mut database: Res<WorldDatabase>,
 ) {
     for point in load_points.iter() {
         for x in -view_distance.horizontal..view_distance.horizontal {
             for y in -view_distance.vertical..view_distance.vertical {
                 for z in -view_distance.horizontal..view_distance.horizontal {
                     let pos = IVec3::new(x + point.0.x, y + point.0.y, z + point.0.z);
-                    if pos == IVec3::new(0, 1, 0) {
-                        if let Some(chunk) = load_chunk(pos, "world.db".to_string()) {
+                    if current_chunks.get_entity(pos).is_none() {
+                        let data = database.connection.lock().unwrap();
+                        if let Some(chunk) = load_chunk(pos, &data) {
                             let chunk_id = commands
                                 .spawn(ChunkComp {
                                     pos: ChunkPos(pos),
@@ -149,12 +151,6 @@ pub fn generate_chunks_world(
                                 .id();
                             current_chunks.insert_entity(pos, chunk_id);
                         } else {
-                            if current_chunks.get_entity(pos).is_none() {
-                                chunk_queue.create.push(pos);
-                            }
-                        }
-                    } else {
-                        if current_chunks.get_entity(pos).is_none() {
                             chunk_queue.create.push(pos);
                         }
                     }
@@ -226,13 +222,15 @@ pub fn clear_unloaded_chunks(
 #[derive(Component)]
 pub struct ChunkGenTask(Task<ChunkComp>);
 
-pub fn process_task(mut commands: Commands, mut chunk_query: Query<(Entity, &mut ChunkGenTask)>) {
+pub fn process_task(
+    mut commands: Commands,
+    mut chunk_query: Query<(Entity, &mut ChunkGenTask)>,
+    mut database: Res<WorldDatabase>,
+) {
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
-            if chunk.pos.0 == IVec3::new(0, 1, 0) {
-                create_database("world.db".to_string());
-                insert_chunk(chunk.pos.0, &chunk.chunk_data, "world.db".to_string());
-            }
+            let data = database.connection.lock().unwrap();
+            insert_chunk(chunk.pos.0, &chunk.chunk_data, &data);
             commands.entity(entity).insert(chunk);
             commands.entity(entity).remove::<ChunkGenTask>();
         }

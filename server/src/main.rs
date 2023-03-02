@@ -3,9 +3,17 @@ use bevy::{
 };
 use bevy_renet::RenetServerPlugin;
 use common::networking::components::NetworkIP;
-use game::setup::GamePlugin;
+use game::{
+    setup::GamePlugin,
+    world::storage::{create_database, WorldDatabase},
+};
 use iyes_loopless::prelude::*;
-use std::{env, time::Duration};
+use rusqlite::*;
+use std::{
+    env,
+    sync::{Arc, Mutex},
+    time::Duration,
+};
 mod game;
 mod networking;
 
@@ -22,10 +30,22 @@ fn main() {
         _ => {}
     }
 
+    let database = Connection::open("world.db").unwrap();
+    database
+        .execute_batch(
+            "PRAGMA journal_mode=WAL;
+            PRAGMA synchronous=NORMAL;",
+        )
+        .unwrap();
+    create_database(&database);
     App::new()
         .insert_resource(ScheduleRunnerSettings::run_loop(Duration::from_secs_f64(
             1.0 / 60.0,
         )))
+        .insert_resource(WorldDatabase {
+            name: "world".to_string(),
+            connection: Arc::new(Mutex::new(database)),
+        })
         .insert_resource(NetworkIP(ip))
         .add_plugins(MinimalPlugins)
         .add_plugin(DiagnosticsPlugin)

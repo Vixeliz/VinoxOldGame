@@ -19,7 +19,10 @@ use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
 use bevy::app::AppExit;
 use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig};
 
-use super::world::chunk::{ChunkGenerationPlugin, ChunkManager, LoadPoint};
+use super::world::{
+    chunk::{ChunkGenerationPlugin, ChunkManager, LoadPoint},
+    storage::create_database,
+};
 
 extern crate common;
 
