@@ -7,6 +7,7 @@ use super::networking::{
 };
 use super::rendering::meshing;
 use super::world::chunk::ChunkHandling;
+use belly::prelude::*;
 use bevy::prelude::*;
 use bevy_atmosphere::prelude::*;
 use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
@@ -33,6 +34,11 @@ pub fn setup(mut commands: Commands) {
     commands.insert_resource(AmbientLight {
         color: Color::rgb_u8(255, 251, 233),
         brightness: 1.0,
+    });
+    commands.add(eml! {
+        <body s:padding="50px">
+            <img src="crosshair.png"/>
+        </body>
     });
 }
 

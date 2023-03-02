@@ -1,19 +1,12 @@
 use std::{io::Cursor, time::Duration};
 
-use bevy::{
-    core_pipeline::bloom::BloomSettings,
-    prelude::*,
-};
+use bevy::{core_pipeline::bloom::BloomSettings, prelude::*};
 use bevy_atmosphere::prelude::*;
 use bevy_easings::{Ease, EaseMethod, EasingType};
 
-
 use bevy_renet::renet::RenetClient;
 use common::{
-    game::{
-        bundles::PlayerBundleBuilder,
-        world::chunk::{Chunk},
-    },
+    game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
     networking::components::{
         ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
         ServerMessages,
@@ -24,12 +17,9 @@ use zstd::stream::copy_decode;
 
 use crate::{
     components::{Game, GameState},
-    states::{
-        game::{
-            input::CameraController,
-            networking::components::ControlledPlayer,
-            world::chunk::{CreateChunkEvent},
-        },
+    states::game::{
+        input::CameraController, networking::components::ControlledPlayer,
+        world::chunk::CreateChunkEvent,
     },
 };
 
@@ -43,7 +33,7 @@ pub fn client_sync_players(
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut entity_buffer: ResMut<EntityBuffer>,
-    _asset_server: Res<AssetServer>,
+    asset_server: Res<AssetServer>,
     player_builder: Res<PlayerBundleBuilder>,
     _meshes: ResMut<Assets<Mesh>>,
     _materials: ResMut<Assets<StandardMaterial>>,

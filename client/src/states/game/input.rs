@@ -1,7 +1,7 @@
 use bevy::{input::mouse::MouseMotion, prelude::*, window::CursorGrabMode};
 use bevy_rapier3d::prelude::{QueryFilter, RapierContext, Velocity};
 use common::game::world::chunk::{
-    world_to_voxel, Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility,
+    world_to_voxel, Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE,
 };
 
 use super::{
@@ -238,11 +238,11 @@ pub fn interact(
     loadable_types: Res<LoadableTypes>,
     rapier_context: Res<RapierContext>,
     windows: ResMut<Windows>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     if mouse_button_input.just_pressed(MouseButton::Left) {
         if let Ok((camera, camera_transform)) = camera_query.get_single() {
-            // let (ray_pos, ray_dir) =
-            //     ray_from_mouse_position(windows.get_primary().unwrap(), camera, camera_transform);
             let ray = camera
                 .viewport_to_world(
                     camera_transform,
@@ -255,17 +255,33 @@ pub fn interact(
                 .unwrap();
             // Then cast the ray.
             let hit = rapier_context.cast_ray_and_get_normal(
-                ray.origin,
-                ray.direction,
+                camera_transform.translation(),
+                camera_transform.forward(),
                 100.0,
                 true,
                 QueryFilter::only_fixed(),
             );
-            if let Some((entity, toi)) = hit {
-                if let Ok(mut chunk) = chunks.get_mut(entity) {
-                    let pos = world_to_voxel(toi.point);
-                    chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
-                    commands.entity(entity).insert(DirtyChunk);
+            if let Some((_, toi)) = hit {
+                let pos = world_to_voxel(toi.point);
+                commands.spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Icosphere {
+                        radius: 0.45,
+                        subdivisions: 32,
+                    })),
+                    material: materials.add(StandardMaterial {
+                        base_color: Color::RED,
+                        // vary key PBR parameters on a grid of spheres to show the effect
+                        unlit: true,
+                        ..default()
+                    }),
+                    transform: Transform::from_translation(toi.point),
+                    ..default()
+                });
+                if let Some(chunk_entity) = current_chunks.get_entity(pos.0) {
+                    if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
+                        chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
+                        commands.entity(chunk_entity).insert(DirtyChunk);
+                    }
                 }
             }
         }
