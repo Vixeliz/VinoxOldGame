@@ -36,18 +36,21 @@ impl CurrentChunks {
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, Clone)]
 pub struct LoadPoint(pub IVec3);
 
+#[derive(Component, Default, Clone)]
+pub struct SentChunk(pub u64);
+
 impl LoadPoint {
-    pub fn is_in_radius(&self, pos: IVec3, min_bound: IVec2, max_bound: IVec2) -> Option<bool> {
+    pub fn is_in_radius(&self, pos: IVec3, min_bound: IVec2, max_bound: IVec2) -> bool {
         if (pos.x > (max_bound.x + self.0.x) || pos.x < (min_bound.x + self.0.x))
             || (pos.y > (max_bound.y + self.0.y) || pos.y < (min_bound.y + self.0.y))
             || (pos.z > (max_bound.x + self.0.z) || pos.z < (min_bound.x + self.0.z))
         {
-            return Some(false);
+            return false;
         }
-        Some(true)
+        true
     }
 }
 
@@ -103,18 +106,18 @@ impl<'w, 's> ChunkManager<'w, 's> {
                 }
             }
         }
-        res.sort_unstable_by_key(|key| FloatOrd(key.pos.0.as_vec3().distance(pos.as_vec3())));
+        // res.sort_unstable_by_key(|key| FloatOrd(key.pos.0.as_vec3().distance(pos.as_vec3())));
 
         res
     }
+}
 
-    pub fn world_to_chunk(&self, pos: Vec3) -> IVec3 {
-        IVec3::new(
-            (pos.x / (CHUNK_SIZE as f32)).floor() as i32,
-            (pos.y / (CHUNK_SIZE as f32)).floor() as i32,
-            (pos.z / (CHUNK_SIZE as f32)).floor() as i32,
-        )
-    }
+pub fn world_to_chunk(pos: Vec3) -> IVec3 {
+    IVec3::new(
+        (pos.x / (CHUNK_SIZE as f32)).floor() as i32,
+        (pos.y / (CHUNK_SIZE as f32)).floor() as i32,
+        (pos.z / (CHUNK_SIZE as f32)).floor() as i32,
+    )
 }
 
 pub fn should_update_chunks(load_points: Query<&LoadPoint, Changed<LoadPoint>>) -> ShouldRun {
@@ -164,37 +167,15 @@ pub fn destroy_chunks(
     mut commands: Commands,
     mut current_chunks: ResMut<CurrentChunks>,
     remove_chunks: Query<&ChunkPos, With<RemoveChunk>>,
+    mut load_points: Query<&mut SentChunks>,
 ) {
     for chunk in remove_chunks.iter() {
+        for mut sent_chunks in load_points.iter_mut() {
+            sent_chunks.chunks.remove(&chunk.0);
+        }
         commands
             .entity(current_chunks.remove_entity(chunk.0).unwrap())
             .despawn_recursive();
-    }
-}
-
-pub fn unsend_chunks(
-    mut load_points: Query<(&LoadPoint, &mut SentChunks)>,
-    view_distance: Res<ViewDistance>,
-    chunks: Query<&ChunkComp>,
-) {
-    for (point, mut sent_chunks) in load_points.iter_mut() {
-        for chunk in chunks.iter() {
-            for x in -view_distance.horizontal..view_distance.horizontal {
-                for y in -view_distance.vertical..view_distance.vertical {
-                    for z in -view_distance.horizontal..view_distance.horizontal {
-                        if let Some(loaded) = point.is_in_radius(
-                            chunk.pos.0,
-                            IVec2::new(-view_distance.horizontal, -view_distance.vertical),
-                            IVec2::new(view_distance.horizontal, view_distance.vertical),
-                        ) {
-                            if !loaded {
-                                sent_chunks.chunks.remove(&chunk.pos.0);
-                            }
-                        }
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -206,14 +187,14 @@ pub fn clear_unloaded_chunks(
 ) {
     for (chunk, entity) in chunks.iter() {
         for load_point in load_points.iter() {
-            if let Some(loaded) = load_point.is_in_radius(
+            if !load_point.is_in_radius(
                 chunk.pos.0,
                 IVec2::new(-view_distance.horizontal, -view_distance.vertical),
                 IVec2::new(view_distance.horizontal, view_distance.vertical),
             ) {
-                if !loaded {
-                    commands.entity(entity).insert(RemoveChunk);
-                }
+                break;
+            } else {
+                commands.entity(entity).insert(RemoveChunk);
             }
         }
     }
@@ -270,7 +251,6 @@ pub fn process_queue(
 pub struct ChunkLoadingStage;
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, SystemLabel)]
-
 pub enum ChunkLoadingSystem {
     /// Runs chunk view distance calculations and queue events for chunk creations and deletions.
     UpdateChunks,
@@ -285,7 +265,7 @@ impl Plugin for ChunkGenerationPlugin {
         app.insert_resource(CurrentChunks::default())
             .insert_resource(ChunkQueue::default())
             .insert_resource(ViewDistance {
-                vertical: 6,
+                vertical: 4,
                 horizontal: 8,
             })
             .insert_resource(SimulationDistance {
@@ -314,7 +294,6 @@ impl Plugin for ChunkGenerationPlugin {
                     ),
             )
             .add_system_to_stage(CoreStage::Last, destroy_chunks)
-            .add_system_to_stage(CoreStage::Last, unsend_chunks)
             .add_system(process_task);
     }
 }

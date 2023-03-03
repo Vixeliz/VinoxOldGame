@@ -221,18 +221,18 @@ pub fn set_block(
 
 pub fn clear_unloaded_chunks(
     _commands: Commands,
-    current_chunks: ResMut<CurrentChunks>,
     view_distance: Res<ViewDistance>,
     player_chunk: Res<PlayerChunk>,
     mut chunk_queue: ResMut<ChunkQueue>,
+    chunks: Query<&ChunkPos>,
 ) {
-    for chunk_pos in current_chunks.chunks.keys() {
+    for chunk_pos in chunks.iter() {
         if !player_chunk.is_in_radius(
-            *chunk_pos,
+            chunk_pos.0,
             IVec2::new(-view_distance.horizontal, -view_distance.vertical),
             IVec2::new(view_distance.horizontal, view_distance.vertical),
         ) {
-            chunk_queue.remove.push(*chunk_pos);
+            chunk_queue.remove.push(chunk_pos.0);
         }
     }
 }

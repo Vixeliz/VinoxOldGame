@@ -37,7 +37,7 @@ pub struct PlayerBundle {
 impl PlayerBundleBuilder {
     pub fn build(&self, translation: Vec3, id: u64, local: bool) -> PlayerBundle {
         let handle = if local {
-            self.local_model.clone()
+            Handle::default()
         } else {
             self.default_model.clone()
         };
