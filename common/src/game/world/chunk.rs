@@ -1,8 +1,11 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt, marker::PhantomData, mem::MaybeUninit};
 
 use bevy::prelude::*;
 use bevy_rapier3d::prelude::Collider;
-use serde::{Deserialize, Serialize};
+use serde::{
+    de::{SeqAccess, Visitor},
+    Deserialize, Deserializer, Serialize,
+};
 
 use serde_big_array::BigArray;
 use strum_macros::EnumString;
@@ -13,6 +16,7 @@ pub const CHUNK_SIZE: u32 = 32;
 pub const CHUNK_SIZE_PADDED: u32 = CHUNK_SIZE + 2;
 pub const CHUNK_BOUND: u32 = CHUNK_SIZE + 1;
 pub const TOTAL_CHUNK_SIZE: u32 = CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED;
+pub const TOTAL_CHUNK_USIZE: usize = TOTAL_CHUNK_SIZE as usize;
 
 #[derive(Resource, Default, Clone)]
 pub struct LoadableTypes {
@@ -134,16 +138,122 @@ impl VoxelType {
     }
 }
 
+fn vec_to_boxed_array<T: Copy, const N: usize>(val: T) -> Box<Array<N>> {
+    let boxed_slice = vec![val; N].into_boxed_slice();
+
+    let ptr = Box::into_raw(boxed_slice) as *mut Array<N>;
+
+    unsafe { Box::from_raw(ptr) }
+}
+
+#[derive(Clone, Hash, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub struct Array<const N: usize>(#[serde(with = "BigArray")] pub [u16; N]);
+
+// fn deserialize_in_place<D>(deserializer: D, place: &mut Self) -> Result<(), D::Error>
+// where
+//     D: Deserializer<'de>,
+// {
+//     struct ArrayInPlaceVisitor<'a, T: 'a, const N: usize>(&'a mut Array<T, N>);
+
+//     impl<'a, 'de, T, const N: usize> Visitor<'de> for ArrayInPlaceVisitor<'a, T, N>
+//     where
+//         T: Deserialize<'de>,
+//     {
+//         type Value = ();
+
+//         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//             formatter.write_str("a sequence")
+//         }
+
+//         fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+//         where
+//             A: SeqAccess<'de>,
+//         {
+//             let mut i = 0;
+
+//             while let Some(value) = seq.next_element::<T>()? {
+//                 self.0[i] = value;
+//                 i += 1;
+//             }
+
+//             assert_eq!(i, N);
+
+//             Ok(())
+//         }
+//     }
+
+//     deserializer.deserialize_seq(ArrayInPlaceVisitor(place))
+// }
+
+// impl<'de, T, const N: usize> Deserialize<'de> for Array<T, N>
+// where
+//     T: Deserialize<'de>,
+// {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: Deserializer<'de>,
+//     {
+//         struct ArrayVisitor<T, const N: usize> {
+//             marker: PhantomData<T>,
+//         }
+
+//         impl<'de, T, const N: usize> Visitor<'de> for ArrayVisitor<T, N>
+//         where
+//             T: Deserialize<'de>,
+//         {
+//             type Value = Array<T, N>;
+
+//             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+//                 formatter.write_str("a sequence")
+//             }
+
+//             fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
+//             where
+//                 A: SeqAccess<'de>,
+//             {
+//                 let mut array = Self::Value::new_uninit();
+
+//                 let mut i = 0;
+
+//                 while let Some(value) = seq.next_element::<T>()? {
+//                     array[i] = MaybeUninit::new(value);
+//                     i += 1;
+//                 }
+
+//                 assert_eq!(i, N);
+
+//                 Ok(unsafe { array.assume_init() })
+//             }
+//         }
+
+//         let visitor = ArrayVisitor {
+//             marker: PhantomData,
+//         };
+//         deserializer.deserialize_seq(visitor)
+//     }
+// }
+// impl<T, const N: usize> Serialize for Array<T, N>
+// where
+//     T: Serialize,
+// {
+//     #[inline]
+//     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//     where
+//         S: serde::Serializer,
+//     {
+//         serializer.collect_seq(&**self)
+//     }
+// }
+
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
-    #[serde(with = "BigArray")]
-    pub voxels: [u16; TOTAL_CHUNK_SIZE as usize],
+    pub voxels: Box<Array<TOTAL_CHUNK_USIZE>>,
 }
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Component)]
 pub struct LightChunk {
-    pub voxels: [u8; TOTAL_CHUNK_SIZE as usize],
+    pub voxels: [u8; TOTAL_CHUNK_USIZE],
 }
 
 impl LightChunk {
@@ -157,7 +267,7 @@ impl LightChunk {
         neighbors: [&RawChunk; 6],
         loadable_types: &LoadableTypes,
     ) {
-        for i in 0..raw_chunk.voxels.len() {
+        for i in 0..raw_chunk.voxels.0.len() {
             let (x, y, z) = RawChunk::delinearize(i);
             if (x > 0 && x < (CHUNK_BOUND) as u32)
                 && (y > 0 && y < (CHUNK_BOUND) as u32)
@@ -178,7 +288,7 @@ impl<'s> Default for RawChunk {
     fn default() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: [0; TOTAL_CHUNK_SIZE as usize],
+            voxels: vec_to_boxed_array::<u16, TOTAL_CHUNK_USIZE>(0),
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -221,7 +331,7 @@ impl RawChunk {
     pub fn new() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: [0; TOTAL_CHUNK_SIZE as usize],
+            voxels: vec_to_boxed_array::<u16, TOTAL_CHUNK_USIZE>(0),
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -229,7 +339,7 @@ impl RawChunk {
 
     pub fn get_voxel(&self, index: usize, loadable_types: &LoadableTypes) -> VoxelType {
         let block_state = self
-            .get_state_for_index(self.voxels[index] as usize)
+            .get_state_for_index(self.voxels.0[index] as usize)
             .unwrap();
         let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
         if block_state.eq("air") {
@@ -246,7 +356,7 @@ impl RawChunk {
 
     pub fn get_data(&self, index: usize, loadable_types: &LoadableTypes) -> Option<BlockType> {
         let block_state = self
-            .get_state_for_index(self.voxels[index] as usize)
+            .get_state_for_index(self.voxels.0[index] as usize)
             .unwrap();
         let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
         if block_state.eq("air") {
@@ -267,12 +377,12 @@ impl RawChunk {
     // This is most likely a VERY awful way to handle this however for now I just want a working solution ill
     // rewrite this if it causes major performance issues
     pub fn update_chunk_pal(&mut self, old_vec: &[String]) {
-        for i in 0..self.voxels.len() {
-            if let Some(block_data) = old_vec.get(self.voxels[i] as usize) {
+        for i in 0..self.voxels.0.len() {
+            if let Some(block_data) = old_vec.get(self.voxels.0[i] as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
-                    self.voxels[i] = new_index as u16;
+                    self.voxels.0[i] = new_index as u16;
                 } else {
-                    self.voxels[i] = 0;
+                    self.voxels.0[i] = 0;
                 }
             }
         }
@@ -303,9 +413,9 @@ impl RawChunk {
         let index = RawChunk::linearize(pos);
         if let Some(block_type) = self.get_index_for_state(&block_data) {
             if block_type == 0 {
-                self.voxels[index] = 0;
+                self.voxels.0[index] = 0;
             } else {
-                self.voxels[index] = block_type as u16; // Set based off of transluency
+                self.voxels.0[index] = block_type as u16; // Set based off of transluency
             }
         } else {
             warn!("Voxel doesn't exist");
@@ -313,6 +423,6 @@ impl RawChunk {
     }
     pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
         let index = RawChunk::linearize(pos);
-        self.get_state_for_index(self.voxels[index] as usize)
+        self.get_state_for_index(self.voxels.0[index] as usize)
     }
 }

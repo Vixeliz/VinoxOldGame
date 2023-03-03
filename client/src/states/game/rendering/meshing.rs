@@ -585,7 +585,7 @@ pub fn process_queue(
                                 .get(
                                     &raw_chunk
                                         .get_state_for_index(
-                                            raw_chunk.voxels[RawChunk::linearize(UVec3::new(
+                                            raw_chunk.voxels.0[RawChunk::linearize(UVec3::new(
                                                 face.quad.voxel[0] as u32,
                                                 face.quad.voxel[1] as u32,
                                                 face.quad.voxel[2] as u32,

@@ -296,7 +296,7 @@ pub fn update_borders(
                     }
                     // TODO: Try to figure out a better way to do this
                     let mut chunk_data_cloned = chunk_data.map(|x| x.chunk_data.clone());
-                    for index in 0..chunk_data_cloned[0].voxels.len() {
+                    for index in 0..chunk_data_cloned[0].voxels.0.len() {
                         let (x, y, z) = RawChunk::delinearize(index as usize);
                         match (x, y, z) {
                             (1..=CHUNK_SIZE, CHUNK_BOUND, 1..=CHUNK_SIZE) => {
