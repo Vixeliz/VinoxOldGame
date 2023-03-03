@@ -14,6 +14,9 @@ use crate::states::game::{
     rendering::meshing::{build_mesh, MeshChunkEvent},
 };
 
+#[derive(Component, Default)]
+pub struct RemoveChunk;
+
 #[derive(Component)]
 pub struct DirtyChunk;
 
@@ -130,12 +133,11 @@ pub fn world_to_chunk(pos: Vec3) -> IVec3 {
 pub fn delete_chunks(
     mut current_chunks: ResMut<CurrentChunks>,
     mut commands: Commands,
-    mut chunk_queue: ResMut<ChunkQueue>,
+    chunks: Query<(Entity, &ChunkComp), With<RemoveChunk>>,
 ) {
-    for chunk in chunk_queue.remove.drain(..) {
-        commands
-            .entity(current_chunks.remove_entity(chunk).unwrap())
-            .despawn_recursive();
+    for (chunk_entity, chunk_pos) in chunks.iter() {
+        current_chunks.remove_entity(chunk_pos.pos.0);
+        commands.entity(chunk_entity).despawn_recursive();
     }
 }
 
@@ -220,19 +222,21 @@ pub fn set_block(
 }
 
 pub fn clear_unloaded_chunks(
-    _commands: Commands,
+    mut commands: Commands,
     view_distance: Res<ViewDistance>,
     player_chunk: Res<PlayerChunk>,
-    mut chunk_queue: ResMut<ChunkQueue>,
-    chunks: Query<&ChunkPos>,
+    chunks: Query<&ChunkComp>,
+    current_chunks: Res<CurrentChunks>,
 ) {
     for chunk_pos in chunks.iter() {
         if !player_chunk.is_in_radius(
-            chunk_pos.0,
+            chunk_pos.pos.0,
             IVec2::new(-view_distance.horizontal, -view_distance.vertical),
             IVec2::new(view_distance.horizontal, view_distance.vertical),
         ) {
-            chunk_queue.remove.push(chunk_pos.0);
+            commands
+                .entity(current_chunks.get_entity(chunk_pos.pos.0).unwrap())
+                .insert(RemoveChunk);
         }
     }
 }
@@ -423,7 +427,7 @@ impl Plugin for ChunkHandling {
             .insert_resource(ChunkQueue::default())
             .insert_resource(PlayerChunk::default())
             .insert_resource(ViewDistance {
-                horizontal: 8,
+                horizontal: 5,
                 vertical: 4,
             })
             .insert_resource(SimulationDistance {
