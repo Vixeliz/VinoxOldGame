@@ -198,16 +198,7 @@ pub fn lerp_new_location(
             if let Some(player_entity) = lobby.players.get(&client.client_id()) {
                 if player_entity.client_entity != *entity {
                     if let Ok(old_transform) = transform_query.get(*entity) {
-                        commands
-                            .get_entity(*entity)
-                            .unwrap()
-                            .insert(old_transform.ease_to(
-                                transform,
-                                EaseMethod::Linear,
-                                EasingType::Once {
-                                    duration: Duration::from_millis(10), //TODO: Lerp based off of last packet received and changed distance
-                                },
-                            ));
+                        commands.get_entity(*entity).unwrap().insert(transform);
                     }
                 } else {
                 }
