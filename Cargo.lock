@@ -478,16 +478,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_easings"
-version = "0.9.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e581985cd96ed1a15f75f2fab552c98dcf2ba9c5c1849bbce8914259f096ad51"
-dependencies = [
- "bevy",
- "interpolation",
-]
-
-[[package]]
 name = "bevy_ecs"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -956,6 +946,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bevy_tweening"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6d38b2abf5518df10c3c32ee57a54b9ba7067f3bd1c137b912e286d573962145"
+dependencies = [
+ "bevy",
+ "interpolation",
+]
+
+[[package]]
 name = "bevy_ui"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1255,10 +1255,10 @@ dependencies = [
  "belly",
  "bevy",
  "bevy_atmosphere",
- "bevy_easings",
  "bevy_egui",
  "bevy_rapier3d",
  "bevy_renet",
+ "bevy_tweening",
  "bimap",
  "bincode",
  "common",

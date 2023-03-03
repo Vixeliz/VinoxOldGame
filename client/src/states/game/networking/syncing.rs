@@ -3,7 +3,10 @@ use std::{io::Cursor, time::Duration};
 use belly::prelude::*;
 use bevy::{core_pipeline::bloom::BloomSettings, prelude::*};
 use bevy_atmosphere::prelude::*;
-use bevy_easings::{Ease, EaseMethod, EasingType};
+use bevy_tweening::{
+    lens::{TransformPositionLens, TransformRotationLens},
+    *,
+};
 
 use bevy_rapier3d::prelude::{CharacterAutostep, CharacterLength, KinematicCharacterController};
 use bevy_renet::renet::RenetClient;
@@ -198,7 +201,29 @@ pub fn lerp_new_location(
             if let Some(player_entity) = lobby.players.get(&client.client_id()) {
                 if player_entity.client_entity != *entity {
                     if let Ok(old_transform) = transform_query.get(*entity) {
-                        commands.get_entity(*entity).unwrap().insert(transform);
+                        let tween = Tween::new(
+                            EaseFunction::QuadraticInOut,
+                            Duration::from_millis(75),
+                            TransformPositionLens {
+                                start: old_transform.translation,
+                                end: transform.translation,
+                            },
+                        )
+                        .with_repeat_count(RepeatCount::Finite(1));
+                        let tween_rot = Tween::new(
+                            EaseFunction::QuadraticInOut,
+                            Duration::from_millis(75),
+                            TransformRotationLens {
+                                start: old_transform.rotation,
+                                end: transform.rotation,
+                            },
+                        )
+                        .with_repeat_count(RepeatCount::Finite(1));
+                        let track = Tracks::new([tween, tween_rot]);
+                        commands
+                            .get_entity(*entity)
+                            .unwrap()
+                            .insert(Animator::new(track));
                     }
                 } else {
                 }

@@ -6,8 +6,8 @@ use std::time::Duration;
 
 use belly::prelude::*;
 use bevy::prelude::*;
-use bevy_easings::EasingsPlugin;
 use bevy_renet::RenetClientPlugin;
+use bevy_tweening::TweeningPlugin;
 use components::GameState;
 use directories::ProjectDirs;
 use iyes_loopless::prelude::*;
@@ -35,7 +35,7 @@ fn main() {
                 .set(ImagePlugin::default_nearest()),
         )
         .add_plugin(BellyPlugin)
-        .add_plugin(EasingsPlugin)
+        .add_plugin(TweeningPlugin)
         .add_plugin(RenetClientPlugin::default())
         .add_fixed_timestep_after_stage(
             CoreStage::Update,
