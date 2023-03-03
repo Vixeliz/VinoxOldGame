@@ -106,7 +106,7 @@ impl<'w, 's> ChunkManager<'w, 's> {
                 }
             }
         }
-        // res.sort_unstable_by_key(|key| FloatOrd(key.pos.0.as_vec3().distance(pos.as_vec3())));
+        res.sort_unstable_by_key(|key| FloatOrd(key.pos.0.as_vec3().distance(pos.as_vec3())));
 
         res
     }
@@ -192,9 +192,29 @@ pub fn clear_unloaded_chunks(
                 IVec2::new(-view_distance.horizontal, -view_distance.vertical),
                 IVec2::new(view_distance.horizontal, view_distance.vertical),
             ) {
-                break;
+                continue;
             } else {
                 commands.entity(entity).insert(RemoveChunk);
+            }
+        }
+    }
+}
+
+pub fn unsend_chunks(
+    chunks: Query<&ChunkComp>,
+    mut load_points: Query<(&LoadPoint, &mut SentChunks)>,
+    view_distance: Res<ViewDistance>,
+) {
+    for (load_point, mut sent_chunks) in load_points.iter_mut() {
+        for chunk in chunks.iter() {
+            if !load_point.is_in_radius(
+                chunk.pos.0,
+                IVec2::new(-view_distance.horizontal, -view_distance.vertical),
+                IVec2::new(view_distance.horizontal, view_distance.vertical),
+            ) {
+                sent_chunks.chunks.remove(&chunk.pos.0);
+            } else {
+                continue;
             }
         }
     }
@@ -279,6 +299,11 @@ impl Plugin for ChunkGenerationPlugin {
                 SystemStage::parallel()
                     .with_system(
                         clear_unloaded_chunks
+                            .label(ChunkLoadingSystem::UpdateChunks)
+                            .with_run_criteria(should_update_chunks),
+                    )
+                    .with_system(
+                        unsend_chunks
                             .label(ChunkLoadingSystem::UpdateChunks)
                             .with_run_criteria(should_update_chunks),
                     )

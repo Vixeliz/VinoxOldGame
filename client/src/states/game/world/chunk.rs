@@ -292,7 +292,7 @@ pub fn update_borders(
                 if let Ok(chunk_data) = chunk_set.p1().get_many_mut(neighbor_entities) {
                     if chunk_data[0].chunk_data.palette == vec!["air".to_string()] {
                         commands.entity(dirty_entity).remove::<DirtyChunk>();
-                        break;
+                        continue;
                     }
                     // TODO: Try to figure out a better way to do this
                     let mut chunk_data_cloned = chunk_data.map(|x| x.chunk_data.clone());

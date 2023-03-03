@@ -18,7 +18,7 @@ use crate::game::world::{
 
 use super::components::ServerLobby;
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct SentChunks {
     pub chunks: HashSet<IVec3>,
 }
@@ -61,6 +61,7 @@ pub fn server_update_system(
                     .insert(SentChunks {
                         chunks: HashSet::new(),
                     })
+                    .insert(LoadPoint(world_to_chunk(transform.translation)))
                     .id();
                 lobby.players.insert(*id, player_entity);
 
