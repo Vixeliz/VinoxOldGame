@@ -41,5 +41,6 @@ zstd = "0.12.3"
 rusqlite = "0.28.0"
 bevy_egui = "0.17.1"
 renet_visualizer = { version="0.0.3", features=["bevy"] }
+rustc_data_structures = "0.0.1"
 
 

@@ -1,6 +1,7 @@
 use std::{collections::HashSet, io::Cursor, mem::size_of_val};
 
 use bevy::prelude::*;
+use bevy_egui::egui::epaint::ahash::HashSetExt;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
     game::{bundles::PlayerBundleBuilder, world::chunk::ChunkComp},
@@ -9,6 +10,7 @@ use common::{
         ServerMessages,
     },
 };
+use rustc_data_structures::stable_set::FxHashSet;
 use zstd::stream::copy_encode;
 
 use crate::game::world::{
@@ -20,7 +22,7 @@ use super::components::ServerLobby;
 
 #[derive(Component, Clone)]
 pub struct SentChunks {
-    pub chunks: HashSet<IVec3>,
+    pub chunks: FxHashSet<IVec3>,
 }
 
 // So i dont forget this is actually fine this is just receiving we are just sending out response packets which dont need to be limited since they only happen once per receive
@@ -59,7 +61,7 @@ pub fn server_update_system(
                 let player_entity = commands
                     .spawn(player_builder.build(transform.translation, *id, false))
                     .insert(SentChunks {
-                        chunks: HashSet::new(),
+                        chunks: FxHashSet::new(),
                     })
                     .insert(LoadPoint(world_to_chunk(transform.translation)))
                     .id();
@@ -75,36 +77,6 @@ pub fn server_update_system(
                 })
                 .unwrap();
                 server.broadcast_message(ServerChannel::ServerMessages, message);
-                // let chunk_pos = world_to_chunk(transform.translation);
-                // let chunk_pos = IVec3::new(0, 0, 0);
-                // for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos).iter() {
-                //     // if let Ok((_, _, _, mut sent_chunks)) = players.get_mut(player_entity) {
-                //     // println!("HeRE");
-                //     // sent_chunks.chunks.insert(chunk.pos.0);
-                //     let raw_chunk = chunk.chunk_data.clone();
-                //     if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
-                //         chunk_data: raw_chunk.clone(),
-                //         pos: chunk.pos.0.into(),
-                //     }) {
-                //         let mut final_chunk = Cursor::new(raw_chunk_bin);
-                //         let mut output = Cursor::new(Vec::new());
-                //         copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                //         if size_of_val(output.get_ref().as_slice()) <= 10000 {
-                //             server.send_message(
-                //                 *id,
-                //                 ServerChannel::LevelDataSmall,
-                //                 output.get_ref().clone(),
-                //             );
-                //         } else {
-                //             server.send_message(
-                //                 *id,
-                //                 ServerChannel::LevelDataLarge,
-                //                 output.get_ref().clone(),
-                //             );
-                //         }
-                //         // }
-                //     }
-                // }
             }
             ServerEvent::ClientDisconnected(id) => {
                 println!("Player {id} disconnected.");
@@ -177,7 +149,7 @@ pub fn send_chunks(
                                 let mut final_chunk = Cursor::new(raw_chunk_bin);
                                 let mut output = Cursor::new(Vec::new());
                                 copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                                if size_of_val(output.get_ref().as_slice()) <= 3000 {
+                                if size_of_val(output.get_ref().as_slice()) <= 10000 {
                                     server.send_message(
                                         client_id,
                                         ServerChannel::LevelDataSmall,

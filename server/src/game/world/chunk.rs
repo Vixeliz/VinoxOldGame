@@ -15,11 +15,12 @@ use common::{
     networking::components::Player,
 };
 use futures_lite::future;
+use rustc_data_structures::stable_map::FxHashMap;
 use std::collections::*;
 
 #[derive(Resource, Default, Debug)]
 pub struct CurrentChunks {
-    pub chunks: HashMap<IVec3, Entity>,
+    pub chunks: FxHashMap<IVec3, Entity>,
 }
 
 impl CurrentChunks {
@@ -286,7 +287,7 @@ impl Plugin for ChunkGenerationPlugin {
             .insert_resource(ChunkQueue::default())
             .insert_resource(ViewDistance {
                 vertical: 4,
-                horizontal: 5,
+                horizontal: 10,
             })
             .insert_resource(SimulationDistance {
                 width: 4,

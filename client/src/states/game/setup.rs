@@ -60,7 +60,10 @@ impl Plugin for GamePlugin {
             .insert_resource(EntityBuffer::default())
             .add_enter_system(GameState::Game, setup)
             .add_exit_system(GameState::Game, despawn_with::<Game>)
-            .add_system(syncing::client_sync_players.run_in_state(GameState::Game))
+            .add_system_to_stage(
+                CoreStage::PostUpdate,
+                syncing::client_sync_players.run_in_state(GameState::Game),
+            )
             .add_system_to_stage(
                 CoreStage::Update,
                 syncing::client_disconect.run_in_state(GameState::Game),

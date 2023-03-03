@@ -427,7 +427,7 @@ impl Plugin for ChunkHandling {
             .insert_resource(ChunkQueue::default())
             .insert_resource(PlayerChunk::default())
             .insert_resource(ViewDistance {
-                horizontal: 5,
+                horizontal: 10,
                 vertical: 4,
             })
             .insert_resource(SimulationDistance {
