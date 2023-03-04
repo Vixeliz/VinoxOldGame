@@ -242,6 +242,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9e1b586273c5702936fe7b7d6896644d8be71e6314cfe09d3167c95f712589e8"
 
 [[package]]
+name = "basis-universal"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4370c833ee2aa93266a91020a3e3ccac025bf62a4bf3148deb3749e899e2140"
+dependencies = [
+ "basis-universal-sys",
+ "bitflags",
+ "lazy_static",
+]
+
+[[package]]
+name = "basis-universal-sys"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "840eabe29cb724fc27525c3cb626880d66fb49231209ad2edd07ed1df197f643"
+dependencies = [
+ "cc",
+]
+
+[[package]]
 name = "belly"
 version = "0.1.0"
 source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
@@ -769,6 +789,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2e3282a8f8779d2aced93207fbed73f740937c6c2bd27bd84f0799b081c7fca5"
 dependencies = [
  "anyhow",
+ "basis-universal",
  "bevy_app",
  "bevy_asset",
  "bevy_core",

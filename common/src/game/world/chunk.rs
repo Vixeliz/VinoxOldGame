@@ -168,7 +168,7 @@ impl LightChunk {
         neighbors: [&RawChunk; 6],
         loadable_types: &LoadableTypes,
     ) {
-        for i in 0..raw_chunk.voxels.0.len() {
+        for i in 0..raw_chunk.voxels.len() {
             let (x, y, z) = RawChunk::delinearize(i);
             if (x > 0 && x < (CHUNK_BOUND) as u32)
                 && (y > 0 && y < (CHUNK_BOUND) as u32)
@@ -278,7 +278,7 @@ impl RawChunk {
     // This is most likely a VERY awful way to handle this however for now I just want a working solution ill
     // rewrite this if it causes major performance issues
     pub fn update_chunk_pal(&mut self, old_vec: &[String]) {
-        for i in 0..self.voxels.0.len() {
+        for i in 0..self.voxels.len() {
             if let Some(block_data) = old_vec.get(self.voxels[i] as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
                     self.voxels[i] = new_index as u16;

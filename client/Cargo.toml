@@ -25,7 +25,7 @@ rpath = false
 
 [dependencies]
 common = { path = "../common"}
-bevy = {workspace = true}
+bevy = {workspace = true, features = ["basis-universal"]}
 bevy_renet = {workspace = true}
 iyes_loopless = "0.9.1"
 belly = {git = "https://github.com/jkb0o/belly.git"}

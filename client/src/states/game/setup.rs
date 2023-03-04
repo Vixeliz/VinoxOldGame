@@ -21,7 +21,7 @@ use crate::{
     systems::despawn_with,
 };
 
-pub fn setup(mut commands: Commands) {
+pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
             color: Color::rgb_u8(178, 255, 238),
@@ -37,9 +37,13 @@ pub fn setup(mut commands: Commands) {
         color: Color::rgb_u8(255, 251, 233),
         brightness: 1.0,
     });
+
+    // let crosshair_handle: Handle<Image> = asset_server.load("crosshair.png");
+    let crosshair_handle = "crosshair.png";
+
     commands.add(eml! {
         <body s:padding="50px" s:position-type="absolute">
-            <img src="crosshair.png"/>
+            <img src=crosshair_handle/>
         </body>
     });
 }
