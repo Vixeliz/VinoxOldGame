@@ -27,10 +27,6 @@ fn main() {
     };
     //TODO: make directory for assets if it doesn't exist and also copy over the game assets to it
     App::new()
-        .insert_resource(WgpuSettings {
-            backends: Some(Backends::DX12),
-            ..default()
-        })
         .add_plugins(
             DefaultPlugins
                 .set(AssetPlugin {
