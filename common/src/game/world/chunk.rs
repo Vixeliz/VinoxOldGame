@@ -7,7 +7,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use serde_big_array::BigArray;
+use serde_big_array::Array;
 use strum_macros::EnumString;
 
 use crate::game::storage::{BlockType, EntityType};
@@ -138,21 +138,18 @@ impl VoxelType {
     }
 }
 
-fn vec_to_boxed_array<T: Copy, const N: usize>(val: T) -> Box<Array<N>> {
+fn vec_to_boxed_array<T: Copy, const N: usize>(val: T) -> Box<Array<T, N>> {
     let boxed_slice = vec![val; N].into_boxed_slice();
 
-    let ptr = Box::into_raw(boxed_slice) as *mut Array<N>;
+    let ptr = Box::into_raw(boxed_slice) as *mut Array<T, N>;
 
     unsafe { Box::from_raw(ptr) }
 }
 
-#[derive(Clone, Hash, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Array<const N: usize>(#[serde(with = "BigArray")] pub [u16; N]);
-
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
-    pub voxels: Box<Array<TOTAL_CHUNK_USIZE>>,
+    pub voxels: Box<Array<u16, TOTAL_CHUNK_USIZE>>,
 }
 
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Component)]
@@ -243,7 +240,7 @@ impl RawChunk {
 
     pub fn get_voxel(&self, index: usize, loadable_types: &LoadableTypes) -> VoxelType {
         let block_state = self
-            .get_state_for_index(self.voxels.0[index] as usize)
+            .get_state_for_index(self.voxels[index] as usize)
             .unwrap();
         let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
         if block_state.eq("air") {
@@ -260,7 +257,7 @@ impl RawChunk {
 
     pub fn get_data(&self, index: usize, loadable_types: &LoadableTypes) -> Option<BlockType> {
         let block_state = self
-            .get_state_for_index(self.voxels.0[index] as usize)
+            .get_state_for_index(self.voxels[index] as usize)
             .unwrap();
         let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
         if block_state.eq("air") {
@@ -282,11 +279,11 @@ impl RawChunk {
     // rewrite this if it causes major performance issues
     pub fn update_chunk_pal(&mut self, old_vec: &[String]) {
         for i in 0..self.voxels.0.len() {
-            if let Some(block_data) = old_vec.get(self.voxels.0[i] as usize) {
+            if let Some(block_data) = old_vec.get(self.voxels[i] as usize) {
                 if let Some(new_index) = self.get_index_for_state(block_data) {
-                    self.voxels.0[i] = new_index as u16;
+                    self.voxels[i] = new_index as u16;
                 } else {
-                    self.voxels.0[i] = 0;
+                    self.voxels[i] = 0;
                 }
             }
         }
@@ -317,9 +314,9 @@ impl RawChunk {
         let index = RawChunk::linearize(pos);
         if let Some(block_type) = self.get_index_for_state(&block_data) {
             if block_type == 0 {
-                self.voxels.0[index] = 0;
+                self.voxels[index] = 0;
             } else {
-                self.voxels.0[index] = block_type as u16; // Set based off of transluency
+                self.voxels[index] = block_type as u16; // Set based off of transluency
             }
         } else {
             warn!("Voxel doesn't exist");
@@ -327,6 +324,6 @@ impl RawChunk {
     }
     pub fn get_block(&mut self, pos: UVec3) -> Option<String> {
         let index = RawChunk::linearize(pos);
-        self.get_state_for_index(self.voxels.0[index] as usize)
+        self.get_state_for_index(self.voxels[index] as usize)
     }
 }
