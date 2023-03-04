@@ -1,6 +1,6 @@
 use std::f32::consts::PI;
 
-use super::input;
+use super::input::{self, MouseSensitivity};
 use super::networking::{
     components::{ClientLobby, NetworkMapping},
     *,
@@ -38,8 +38,8 @@ pub fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
         brightness: 1.0,
     });
 
-    // let crosshair_handle: Handle<Image> = asset_server.load("crosshair.png");
-    let crosshair_handle = "crosshair.png";
+    let crosshair_handle: Handle<Image> = asset_server.load("crosshair.png");
+    // let crosshair_handle = "crosshair.png";
 
     commands.add(eml! {
         <body s:padding="50px" s:position-type="absolute">
@@ -62,6 +62,7 @@ impl Plugin for GamePlugin {
             .insert_resource(NetworkMapping::default())
             .insert_resource(ClientLobby::default())
             .insert_resource(EntityBuffer::default())
+            .insert_resource(MouseSensitivity(1.0))
             .add_enter_system(GameState::Game, setup)
             .add_exit_system(GameState::Game, despawn_with::<Game>)
             .add_system_to_stage(
@@ -78,7 +79,9 @@ impl Plugin for GamePlugin {
                 syncing::client_send_naive_position.run_in_state(GameState::Game),
             )
             .add_system(syncing::lerp_new_location.run_in_state(GameState::Game))
-            .add_system(input::camera_controller.run_in_state(GameState::Game))
+            .add_system(input::collision_movement_system.run_in_state(GameState::Game))
+            .add_system(input::spawn_camera.run_in_state(GameState::Game))
+            .add_system(input::movement_input_system.run_in_state(GameState::Game))
             .add_system(input::interact.run_in_state(GameState::Game))
             .add_system(meshing::process_queue.run_in_state(GameState::Game))
             .add_system(meshing::process_task.run_in_state(GameState::Game))

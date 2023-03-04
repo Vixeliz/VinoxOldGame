@@ -6,7 +6,7 @@ use crate::systems::despawn_with;
 use belly::prelude::*;
 use bevy::app::AppExit;
 use bevy::prelude::*;
-use common::networking::components::{NetworkIP};
+use common::networking::components::NetworkIP;
 use iyes_loopless::prelude::*;
 
 pub struct StartEvent;
@@ -56,16 +56,16 @@ pub fn setup(mut commands: Commands, _asset_server: Res<AssetServer>) {
             <brl/>
         </div>
         <div>
-             <button on:press=connect!(|ctx| {
+             <button on:press=|ctx| {
                 ctx.send_event(StartEvent{})
-                })>
+                }>
                     "Play"
             </button>
         </div>
         <div>
-             <button on:press=connect!(|ctx| {
+             <button on:press=|ctx| {
                 ctx.send_event(QuitEvent{})
-                })>
+                }>
                     "Quit"
             </button>
         </div>

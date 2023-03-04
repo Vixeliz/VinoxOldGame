@@ -30,3 +30,5 @@ This software has used https://github.com/Game4all/vx_bevy for some ideas for im
 This is licensed under the MIT license see the link
 
 This software has also used https://github.com/bonsairobo/block-mesh-rs licensed under MIT for implementation of ao
+
+the character controller is basically the one from https://github.com/Nhlest/shikataganai. licensed under mit

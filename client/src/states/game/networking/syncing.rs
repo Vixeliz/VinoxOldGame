@@ -23,7 +23,7 @@ use zstd::stream::copy_decode;
 use crate::{
     components::{Game, GameState},
     states::game::{
-        input::CameraController,
+        input::FPSCamera,
         networking::components::ControlledPlayer,
         world::chunk::{CreateChunkEvent, PlayerChunk, SetBlockEvent},
     },
@@ -65,38 +65,38 @@ pub fn client_sync_players(
                 let mut client_entity = cmd1.spawn_empty();
                 if client_id == id {
                     println!("You connected.");
-                    let camera_id = cmd2
-                        .spawn((
-                            Game,
-                            Camera3dBundle {
-                                camera: Camera {
-                                    hdr: true,
-                                    ..default()
-                                },
-                                transform: Transform::from_translation(Vec3::new(0.0, 1.0, 0.0)),
-                                ..default()
-                            },
-                            CameraController::default(),
-                            BloomSettings::default(),
-                            AtmosphereCamera::default(),
-                        ))
-                        .id();
-                    client_entity.push_children(&[camera_id]);
+                    // let camera_id = cmd2
+                    //     .spawn((
+                    //         Game,
+                    //         Camera3dBundle {
+                    //             camera: Camera {
+                    //                 hdr: true,
+                    //                 ..default()
+                    //             },
+                    //             transform: Transform::from_translation(Vec3::new(0.0, 1.0, 0.0)),
+                    //             ..default()
+                    //         },
+                    //         FPSCamera::default(),
+                    //         BloomSettings::default(),
+                    //         AtmosphereCamera::default(),
+                    //     ))
+                    //     .id();
+                    // client_entity.push_children(&[camera_id]);
                     client_entity
                         .insert(player_builder.build(translation.into(), id, true))
                         .insert(ControlledPlayer)
-                        .insert(KinematicCharacterController {
-                            snap_to_ground: Some(
-                                bevy_rapier3d::prelude::CharacterLength::Relative(0.3),
-                            ),
-                            autostep: Some(CharacterAutostep {
-                                max_height: CharacterLength::Absolute(1.0),
-                                min_width: CharacterLength::Absolute(0.5),
-                                include_dynamic_bodies: false,
-                            }),
-                            offset: CharacterLength::Absolute(0.04),
-                            ..default()
-                        })
+                        // .insert(KinematicCharacterController {
+                        //     // snap_to_ground: Some(
+                        //     //     bevy_rapier3d::prelude::CharacterLength::Relative(0.3),
+                        //     // ),
+                        //     autostep: Some(CharacterAutostep {
+                        //         max_height: CharacterLength::Absolute(1.1),
+                        //         min_width: CharacterLength::Absolute(0.1),
+                        //         include_dynamic_bodies: false,
+                        //     }),
+                        //     offset: CharacterLength::Absolute(0.04),
+                        //     ..default()
+                        // })
                         .insert(JustSpawned {
                             timer: Timer::new(Duration::from_secs(10), TimerMode::Once),
                         });

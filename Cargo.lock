@@ -263,8 +263,8 @@ dependencies = [
 
 [[package]]
 name = "belly"
-version = "0.1.0"
-source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
+version = "0.1.1"
+source = "git+https://github.com/jkb0o/belly.git#9f35d4c05410f908b67db283638f0135e8dee2d8"
 dependencies = [
  "belly_core",
  "belly_macro",
@@ -276,8 +276,8 @@ dependencies = [
 
 [[package]]
 name = "belly_core"
-version = "0.1.0"
-source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
+version = "0.1.1"
+source = "git+https://github.com/jkb0o/belly.git#9f35d4c05410f908b67db283638f0135e8dee2d8"
 dependencies = [
  "bevy",
  "bevy_stylebox",
@@ -291,8 +291,8 @@ dependencies = [
 
 [[package]]
 name = "belly_macro"
-version = "0.1.0"
-source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
+version = "0.1.1"
+source = "git+https://github.com/jkb0o/belly.git#9f35d4c05410f908b67db283638f0135e8dee2d8"
 dependencies = [
  "belly_core",
  "bevy",
@@ -306,8 +306,8 @@ dependencies = [
 
 [[package]]
 name = "belly_widgets"
-version = "0.1.0"
-source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
+version = "0.1.1"
+source = "git+https://github.com/jkb0o/belly.git#9f35d4c05410f908b67db283638f0135e8dee2d8"
 dependencies = [
  "ab_glyph",
  "belly_core",
@@ -897,7 +897,7 @@ dependencies = [
 [[package]]
 name = "bevy_stylebox"
 version = "0.1.0"
-source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
+source = "git+https://github.com/jkb0o/belly.git#9f35d4c05410f908b67db283638f0135e8dee2d8"
 dependencies = [
  "bevy",
 ]
@@ -4418,7 +4418,7 @@ dependencies = [
 [[package]]
 name = "tagstr"
 version = "0.1.0"
-source = "git+https://github.com/jkb0o/belly.git#7dc2e03bcb1344971fb783c663912a1f6836855a"
+source = "git+https://github.com/jkb0o/belly.git#9f35d4c05410f908b67db283638f0135e8dee2d8"
 dependencies = [
  "hashbrown 0.13.2",
  "lazy_static",
