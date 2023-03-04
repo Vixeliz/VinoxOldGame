@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use belly::prelude::*;
 use bevy::prelude::*;
+use bevy::render::settings::{Backends, WgpuSettings};
 use bevy_renet::RenetClientPlugin;
 use bevy_tweening::TweeningPlugin;
 use components::GameState;
@@ -26,6 +27,10 @@ fn main() {
     };
     //TODO: make directory for assets if it doesn't exist and also copy over the game assets to it
     App::new()
+        .insert_resource(WgpuSettings {
+            backends: Some(Backends::DX12),
+            ..default()
+        })
         .add_plugins(
             DefaultPlugins
                 .set(AssetPlugin {
