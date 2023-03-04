@@ -144,8 +144,8 @@ impl ServerChannel {
                 channel_id: Self::LevelDataSmall.into(),
                 max_message_size: 10000,
                 packet_budget: 10000,
-                message_send_queue_size: 1000000,
-                message_receive_queue_size: 1000000,
+                message_send_queue_size: 2500000,
+                message_receive_queue_size: 2500000,
                 ..Default::default()
             }
             .into(),

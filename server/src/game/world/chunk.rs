@@ -91,17 +91,21 @@ impl<'w, 's> ChunkManager<'w, 's> {
         self.chunk_queue.create.push(pos);
     }
 
-    pub fn get_chunks_around_chunk(&mut self, pos: IVec3) -> Vec<&ChunkComp> {
+    pub fn get_chunks_around_chunk(
+        &mut self,
+        pos: IVec3,
+        sent_chunks: &SentChunks,
+    ) -> Vec<&ChunkComp> {
         let mut res = Vec::new();
         for x in -self.view_distance.horizontal..self.view_distance.horizontal {
             for y in -self.view_distance.vertical..self.view_distance.vertical {
                 for z in -self.view_distance.horizontal..self.view_distance.horizontal {
-                    if let Some(entity) =
-                        self.current_chunks
-                            .get_entity(IVec3::new(pos.x + x, pos.y + y, pos.z + z))
-                    {
-                        if let Ok(chunk) = self.chunk_query.get(entity) {
-                            res.push(chunk);
+                    let chunk_pos = IVec3::new(pos.x + x, pos.y + y, pos.z + z);
+                    if !sent_chunks.chunks.contains(&chunk_pos) {
+                        if let Some(entity) = self.current_chunks.get_entity(chunk_pos) {
+                            if let Ok(chunk) = self.chunk_query.get(entity) {
+                                res.push(chunk);
+                            }
                         }
                     }
                 }

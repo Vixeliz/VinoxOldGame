@@ -85,6 +85,10 @@ impl Plugin for GamePlugin {
             .add_system(
                 crate::states::game::input::update_visualizer_system.run_in_state(GameState::Game),
             )
+            .add_system(
+                crate::states::game::networking::syncing::wait_for_chunks
+                    .run_in_state(GameState::Game),
+            )
             .add_event::<crate::states::game::rendering::meshing::MeshChunkEvent>();
     }
 }

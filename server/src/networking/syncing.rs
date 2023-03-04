@@ -10,6 +10,7 @@ use common::{
         ServerMessages,
     },
 };
+use rand::seq::{IteratorRandom, SliceRandom};
 use rustc_data_structures::stable_set::FxHashSet;
 use zstd::stream::copy_encode;
 
@@ -56,7 +57,7 @@ pub fn server_update_system(
                 }
 
                 // Spawn new player
-                let transform = Transform::from_xyz(0.0, 150.0, -10.0);
+                let transform = Transform::from_xyz(0.0, 200.0, -10.0);
                 // let player_entity = commands.spawn((transform, Player { id: *id })).id();
                 let player_entity = commands
                     .spawn(player_builder.build(transform.translation, *id, false))
@@ -125,8 +126,7 @@ pub fn send_chunks(
     mut server: ResMut<RenetServer>,
     lobby: ResMut<ServerLobby>,
     mut players: Query<(&Transform, &mut SentChunks), With<Player>>,
-    chunks: Query<&ChunkComp>,
-    view_distance: Res<ViewDistance>,
+    mut chunk_manager: ChunkManager,
 ) {
     for client_id in server.clients_id().into_iter() {
         if let Some(player_entity) = lobby.players.get(&client_id) {
@@ -134,37 +134,32 @@ pub fn send_chunks(
                 let chunk_pos = world_to_chunk(player_transform.translation);
                 let load_point = LoadPoint(chunk_pos);
                 commands.entity(*player_entity).insert(load_point.clone());
-                for chunk in chunks.iter() {
-                    if load_point.is_in_radius(
-                        chunk.pos.0,
-                        IVec2::new(-view_distance.horizontal, -view_distance.vertical),
-                        IVec2::new(view_distance.horizontal, view_distance.vertical),
-                    ) {
-                        if !sent_chunks.chunks.contains(&chunk.pos.0) {
-                            let raw_chunk = chunk.chunk_data.clone();
-                            if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
-                                chunk_data: raw_chunk,
-                                pos: chunk.pos.0.into(),
-                            }) {
-                                let mut final_chunk = Cursor::new(raw_chunk_bin);
-                                let mut output = Cursor::new(Vec::new());
-                                copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                                if size_of_val(output.get_ref().as_slice()) <= 10000 {
-                                    server.send_message(
-                                        client_id,
-                                        ServerChannel::LevelDataSmall,
-                                        output.get_ref().clone(),
-                                    );
-                                } else {
-                                    server.send_message(
-                                        client_id,
-                                        ServerChannel::LevelDataLarge,
-                                        output.get_ref().clone(),
-                                    );
-                                }
-                                sent_chunks.chunks.insert(chunk.pos.0);
-                            }
+                for chunk in chunk_manager
+                    .get_chunks_around_chunk(chunk_pos, &sent_chunks)
+                    .choose_multiple(&mut rand::thread_rng(), 10)
+                {
+                    let raw_chunk = chunk.chunk_data.clone();
+                    if let Ok(raw_chunk_bin) = bincode::serialize(&LevelData::ChunkCreate {
+                        chunk_data: raw_chunk,
+                        pos: chunk.pos.0.into(),
+                    }) {
+                        let mut final_chunk = Cursor::new(raw_chunk_bin);
+                        let mut output = Cursor::new(Vec::new());
+                        copy_encode(&mut final_chunk, &mut output, 0).unwrap();
+                        if size_of_val(output.get_ref().as_slice()) <= 10000 {
+                            server.send_message(
+                                client_id,
+                                ServerChannel::LevelDataSmall,
+                                output.get_ref().clone(),
+                            );
+                        } else {
+                            server.send_message(
+                                client_id,
+                                ServerChannel::LevelDataLarge,
+                                output.get_ref().clone(),
+                            );
                         }
+                        sent_chunks.chunks.insert(chunk.pos.0);
                     }
                 }
             }
