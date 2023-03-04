@@ -485,7 +485,6 @@ pub fn process_task(
                                         .texture
                                         .clone(),
                                 ),
-                                alpha_mode: AlphaMode::Mask(1.0),
                                 perceptual_roughness: 1.0,
                                 ..default()
                             }),
