@@ -6,3 +6,4 @@ run.sh
 *.db
 *.db-wal
 *.db-shm
+*.ps1
