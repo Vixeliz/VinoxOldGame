@@ -331,11 +331,16 @@ pub fn interact(
                                     || ((point.y as f32) <= player_transform.translation.y - 2.0
                                         || (point.y as f32) >= player_transform.translation.y + 1.0)
                                 {
-                                    chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
+                                    chunk
+                                        .chunk_data
+                                        .add_block_state(&"vinoxgreybrick".to_string());
+                                    chunk
+                                        .chunk_data
+                                        .set_block(pos.1, "vinoxgreybrick".to_string());
                                     let send_block = components::Commands::SentBlock {
                                         chunk_pos: pos.0.into(),
                                         voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
-                                        block_type: "vinoxdirt".to_string(),
+                                        block_type: "vinoxgreybrick".to_string(),
                                     };
                                     let input_message = bincode::serialize(&send_block).unwrap();
 
