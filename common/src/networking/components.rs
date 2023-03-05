@@ -143,9 +143,9 @@ impl ServerChannel {
             ReliableChannelConfig {
                 channel_id: Self::LevelDataSmall.into(),
                 max_message_size: 10000,
-                packet_budget: 50000,
-                message_send_queue_size: 2500000,
-                message_receive_queue_size: 2500000,
+                packet_budget: 60000,
+                message_send_queue_size: 4000000,
+                message_receive_queue_size: 4000000,
                 ..Default::default()
             }
             .into(),
@@ -168,7 +168,7 @@ pub fn client_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: ClientChannel::channels_config(),
         receive_channels_config: ServerChannel::channels_config(),
-        max_packet_size: 55000,
+        max_packet_size: 100000,
         ..Default::default()
     }
 }
@@ -177,7 +177,7 @@ pub fn server_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: ServerChannel::channels_config(),
         receive_channels_config: ClientChannel::channels_config(),
-        max_packet_size: 55000,
+        max_packet_size: 100000,
         ..Default::default()
     }
 }
