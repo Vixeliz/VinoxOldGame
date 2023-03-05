@@ -452,7 +452,7 @@ pub fn spawn_camera(
         *local = true;
         let camera = {
             let perspective_projection = PerspectiveProjection {
-                fov: std::f32::consts::PI / 4.0,
+                fov: std::f32::consts::PI / 1.8,
                 near: 0.001,
                 far: 1000.0,
                 aspect_ratio: 1.0,
