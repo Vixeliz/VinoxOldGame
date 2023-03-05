@@ -138,14 +138,6 @@ impl VoxelType {
     }
 }
 
-fn vec_to_boxed_array<T: Copy, const N: usize>(val: T) -> Box<Array<T, N>> {
-    let boxed_slice = vec![val; N].into_boxed_slice();
-
-    let ptr = Box::into_raw(boxed_slice) as *mut Array<T, N>;
-
-    unsafe { Box::from_raw(ptr) }
-}
-
 #[derive(Clone, Hash, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RawChunk {
     pub palette: Vec<String>, // The namespace string will also be semi-colon seperated with state data for blocks that need it
@@ -189,7 +181,7 @@ impl<'s> Default for RawChunk {
     fn default() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: vec_to_boxed_array::<u16, TOTAL_CHUNK_USIZE>(0),
+            voxels: Box::new(Array::default()),
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -232,7 +224,7 @@ impl RawChunk {
     pub fn new() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: vec_to_boxed_array::<u16, TOTAL_CHUNK_USIZE>(0),
+            voxels: Box::new(Array::default()),
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
