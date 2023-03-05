@@ -329,7 +329,7 @@ pub fn interact(
                                     || ((point.z as f32) <= player_transform.translation.z - 0.5
                                         || (point.z as f32) >= player_transform.translation.z + 0.5)
                                     || ((point.y as f32) <= player_transform.translation.y - 2.0
-                                        || (point.y as f32) >= player_transform.translation.y + 2.0)
+                                        || (point.y as f32) >= player_transform.translation.y + 1.0)
                                 {
                                     chunk.chunk_data.set_block(pos.1, "vinoxdirt".to_string());
                                     let send_block = components::Commands::SentBlock {
