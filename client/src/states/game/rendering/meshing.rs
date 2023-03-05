@@ -245,14 +245,14 @@ where
         ];
     } else if current_side == Side::new(Axis::Y, false) {
         neighbours = [
+            chunk.get(x + 1, y - 1, z, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
             chunk.get(x, y - 1, z + 1, loadable_types),
             chunk.get(x - 1, y - 1, z + 1, loadable_types),
             chunk.get(x - 1, y - 1, z, loadable_types),
             chunk.get(x - 1, y - 1, z - 1, loadable_types),
             chunk.get(x, y - 1, z - 1, loadable_types),
             chunk.get(x + 1, y - 1, z - 1, loadable_types),
-            chunk.get(x + 1, y - 1, z, loadable_types),
-            chunk.get(x + 1, y - 1, z + 1, loadable_types),
         ];
     } else if current_side == Side::new(Axis::Y, true) {
         neighbours = [
