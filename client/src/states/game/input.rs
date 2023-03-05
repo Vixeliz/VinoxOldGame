@@ -627,7 +627,7 @@ pub fn movement_input_system(
 
                 if key_events.pressed(KeyCode::Space) && *stationary_frames > 2 {
                     *stationary_frames = 0;
-                    fps_camera.velocity.y = 10.0;
+                    fps_camera.velocity.y = 12.0;
                 }
             }
 
@@ -642,7 +642,11 @@ pub fn movement_input_system(
             let y = fps_camera.velocity.y;
             fps_camera.velocity.y = 0.0;
             fps_camera.velocity = movement;
-            fps_camera.velocity *= 5.0;
+            if key_events.pressed(KeyCode::LShift) {
+                fps_camera.velocity *= 10.0;
+            } else {
+                fps_camera.velocity *= 5.0;
+            }
             fps_camera.velocity.y = y;
             let chunk_pos = world_to_chunk(translation);
 
@@ -650,7 +654,7 @@ pub fn movement_input_system(
                 return;
             }
 
-            fps_camera.velocity.y -= 19.8 * time.delta().as_secs_f32().clamp(0.0, 0.1);
+            fps_camera.velocity.y -= 35.0 * time.delta().as_secs_f32().clamp(0.0, 0.1);
         }
     }
 }
