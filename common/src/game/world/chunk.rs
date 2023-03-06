@@ -1,11 +1,8 @@
-use std::{collections::HashMap, fmt, marker::PhantomData, mem::MaybeUninit};
+use std::collections::HashMap;
 
 use bevy::prelude::*;
-use bevy_rapier3d::prelude::Collider;
-use serde::{
-    de::{SeqAccess, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+
+use serde::{Deserialize, Serialize};
 
 use serde_big_array::Array;
 use strum_macros::EnumString;
@@ -109,7 +106,7 @@ impl Default for VoxelType {
     }
 }
 
-impl<'s> Voxel for VoxelType {
+impl Voxel for VoxelType {
     fn visibility(&self) -> VoxelVisibility {
         match self {
             Self::Empty(_) => VoxelVisibility::Empty,
@@ -157,19 +154,19 @@ impl LightChunk {
     pub fn calculate_light(
         &mut self,
         raw_chunk: &RawChunk,
-        neighbors: [&RawChunk; 6],
+        _neighbors: [&RawChunk; 6],
         loadable_types: &LoadableTypes,
     ) {
         for i in 0..raw_chunk.voxels.len() {
             let (x, y, z) = RawChunk::delinearize(i);
-            if (x > 0 && x < (CHUNK_BOUND) as u32)
-                && (y > 0 && y < (CHUNK_BOUND) as u32)
-                && (z > 0 && z < (CHUNK_BOUND) as u32)
+            if (x > 0 && x < CHUNK_BOUND)
+                && (y > 0 && y < CHUNK_BOUND)
+                && (z > 0 && z < CHUNK_BOUND)
             {
                 if let Some(light_val) = raw_chunk.get_data(i, loadable_types) {
                     let light_val = light_val.light_val;
                     if light_val > 0 {
-                        for l in 0..light_val {}
+                        for _l in 0..light_val {}
                     }
                 }
             }
@@ -177,11 +174,11 @@ impl LightChunk {
     }
 }
 
-impl<'s> Default for RawChunk {
+impl Default for RawChunk {
     fn default() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: Box::new(Array::default()),
+            voxels: Box::default(),
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -224,7 +221,7 @@ impl RawChunk {
     pub fn new() -> RawChunk {
         let mut raw_chunk = RawChunk {
             palette: Vec::new(),
-            voxels: Box::new(Array::default()),
+            voxels: Box::default(),
         };
         raw_chunk.palette.push("air".to_string());
         raw_chunk
@@ -251,7 +248,7 @@ impl RawChunk {
         let block_state = self
             .get_state_for_index(self.voxels[index] as usize)
             .unwrap();
-        let block_id = self.get_index_for_state(&block_state).unwrap() as u16;
+        let _block_id = self.get_index_for_state(&block_state).unwrap() as u16;
         if block_state.eq("air") {
             None
         } else {

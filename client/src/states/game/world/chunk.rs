@@ -1,12 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use belly::prelude::*;
 use bevy::{ecs::schedule::ShouldRun, prelude::*, render::primitives::Aabb};
 use bevy_rapier3d::prelude::Collider;
 
 use common::game::world::chunk::{
-    Chunk, ChunkComp, ChunkPos, LoadableTypes, RawChunk, VoxelType, CHUNK_BOUND, CHUNK_SIZE,
-    CHUNK_SIZE_PADDED, TOTAL_CHUNK_SIZE,
+    Chunk, ChunkComp, ChunkPos, LoadableTypes, RawChunk, CHUNK_BOUND, CHUNK_SIZE,
 };
 
 use crate::states::game::{
@@ -64,18 +62,13 @@ impl CurrentChunks {
     pub fn get_entity(&self, pos: IVec3) -> Option<Entity> {
         self.chunks.get(&pos).copied()
     }
-    pub fn all_neighbors_exist(&self, pos: IVec3, min_bound: IVec2, max_bound: IVec2) -> bool {
-        if self.chunks.contains_key(&(pos + IVec3::new(0, 1, 0)))
+    pub fn all_neighbors_exist(&self, pos: IVec3, _min_bound: IVec2, _max_bound: IVec2) -> bool {
+        self.chunks.contains_key(&(pos + IVec3::new(0, 1, 0)))
             && self.chunks.contains_key(&(pos + IVec3::new(0, -1, 0)))
             && self.chunks.contains_key(&(pos + IVec3::new(1, 0, 0)))
             && self.chunks.contains_key(&(pos + IVec3::new(-1, 0, 0)))
             && self.chunks.contains_key(&(pos + IVec3::new(0, 0, 1)))
             && self.chunks.contains_key(&(pos + IVec3::new(0, 0, -1)))
-        {
-            true
-        } else {
-            false
-        }
     }
 }
 
@@ -244,6 +237,7 @@ pub fn clear_unloaded_chunks(
 
 // Dirty chunks get marked in the following cases. A new neighbor spawns by them, the terrain is modified, or if a neighbor disapears
 // This runs first then we remesh
+#[allow(clippy::type_complexity)]
 pub fn update_borders(
     mut commands: Commands,
     current_chunks: ResMut<CurrentChunks>,
@@ -298,7 +292,7 @@ pub fn update_borders(
                     // TODO: Try to figure out a better way to do this
                     let mut chunk_data_cloned = chunk_data.map(|x| x.chunk_data.clone());
                     for index in 0..chunk_data_cloned[0].voxels.0.len() {
-                        let (x, y, z) = RawChunk::delinearize(index as usize);
+                        let (x, y, z) = RawChunk::delinearize(index);
                         match (x, y, z) {
                             (1..=CHUNK_SIZE, CHUNK_BOUND, 1..=CHUNK_SIZE) => {
                                 let block_string =
@@ -361,6 +355,7 @@ pub fn update_borders(
     }
 }
 
+#[allow(clippy::nonminimal_bool)]
 pub fn receive_chunks(
     mut current_chunks: ResMut<CurrentChunks>,
     mut commands: Commands,

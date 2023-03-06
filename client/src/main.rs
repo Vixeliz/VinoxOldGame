@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use belly::prelude::*;
 use bevy::prelude::*;
-use bevy::render::settings::{Backends, WgpuSettings};
+
 use bevy_renet::RenetClientPlugin;
 use bevy_tweening::TweeningPlugin;
 use components::GameState;

@@ -4144,7 +4144,6 @@ name = "server"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bevy_egui",
  "bevy_rapier3d",
  "bevy_renet",
  "bincode",
@@ -4155,7 +4154,6 @@ dependencies = [
  "mlua",
  "noise",
  "rand 0.8.5",
- "renet_visualizer",
  "ron",
  "rusqlite",
  "rustc_data_structures",

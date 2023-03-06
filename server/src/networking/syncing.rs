@@ -1,7 +1,6 @@
-use std::{collections::HashSet, io::Cursor, mem::size_of_val};
+use std::{io::Cursor, mem::size_of_val};
 
 use bevy::prelude::*;
-use bevy_egui::egui::epaint::ahash::HashSetExt;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
     game::{bundles::PlayerBundleBuilder, world::chunk::ChunkComp},
@@ -10,13 +9,13 @@ use common::{
         ServerMessages, RELIABLE_CHANNEL_MAX_LENGTH,
     },
 };
-use rand::seq::{IteratorRandom, SliceRandom};
+use rand::seq::SliceRandom;
 use rustc_data_structures::stable_set::FxHashSet;
 use zstd::stream::copy_encode;
 
 use crate::game::world::{
-    chunk::{world_to_chunk, ChunkManager, CurrentChunks, LoadPoint, ViewDistance},
-    storage::{create_database, insert_chunk, WorldDatabase},
+    chunk::{world_to_chunk, ChunkManager, CurrentChunks, LoadPoint},
+    storage::{insert_chunk, WorldDatabase},
 };
 
 use super::components::ServerLobby;
@@ -35,7 +34,7 @@ pub fn server_update_system(
     mut server: ResMut<RenetServer>,
     mut players: Query<(Entity, &Player, &Transform, &mut SentChunks)>,
     player_builder: Res<PlayerBundleBuilder>,
-    mut chunk_manager: ChunkManager,
+    _chunk_manager: ChunkManager,
 ) {
     for event in server_events.iter() {
         match event {
@@ -62,7 +61,7 @@ pub fn server_update_system(
                 let player_entity = commands
                     .spawn(player_builder.build(transform.translation, *id, false))
                     .insert(SentChunks {
-                        chunks: FxHashSet::new(),
+                        chunks: FxHashSet::default(),
                     })
                     .insert(LoadPoint(world_to_chunk(transform.translation)))
                     .id();
@@ -177,42 +176,33 @@ pub fn block_sync(
 ) {
     for client_id in server.clients_id().into_iter() {
         while let Some(message) = server.receive_message(client_id, ClientChannel::Commands) {
-            if let Ok(sent_block) = bincode::deserialize::<components::Commands>(&message) {
-                match sent_block {
-                    components::Commands::SentBlock {
-                        chunk_pos,
-                        voxel_pos,
-                        block_type,
-                    } => {
-                        if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos.into()) {
-                            if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
-                                chunk.chunk_data.add_block_state(&block_type);
-                                chunk.chunk_data.set_block(
-                                    UVec3::new(
-                                        voxel_pos[0] as u32,
-                                        voxel_pos[1] as u32,
-                                        voxel_pos[2] as u32,
-                                    ),
-                                    block_type.clone(),
-                                );
-                                let data = database.connection.lock().unwrap();
-                                insert_chunk(chunk.pos.0, &chunk.chunk_data, &data);
-                                if let Ok(send_message) =
-                                    bincode::serialize(&ServerMessages::SentBlock {
-                                        chunk_pos,
-                                        voxel_pos,
-                                        block_type,
-                                    })
-                                {
-                                    server.broadcast_message(
-                                        ServerChannel::ServerMessages,
-                                        send_message,
-                                    );
-                                }
-                            }
+            if let Ok(components::Commands::SentBlock {
+                chunk_pos,
+                voxel_pos,
+                block_type,
+            }) = bincode::deserialize::<components::Commands>(&message)
+            {
+                if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos.into()) {
+                    if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
+                        chunk.chunk_data.add_block_state(&block_type);
+                        chunk.chunk_data.set_block(
+                            UVec3::new(
+                                voxel_pos[0] as u32,
+                                voxel_pos[1] as u32,
+                                voxel_pos[2] as u32,
+                            ),
+                            block_type.clone(),
+                        );
+                        let data = database.connection.lock().unwrap();
+                        insert_chunk(chunk.pos.0, &chunk.chunk_data, &data);
+                        if let Ok(send_message) = bincode::serialize(&ServerMessages::SentBlock {
+                            chunk_pos,
+                            voxel_pos,
+                            block_type,
+                        }) {
+                            server.broadcast_message(ServerChannel::ServerMessages, send_message);
                         }
                     }
-                    _ => {}
                 }
             }
         }

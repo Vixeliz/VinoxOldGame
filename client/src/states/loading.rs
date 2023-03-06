@@ -1,5 +1,5 @@
 use bevy::{asset::LoadState, math::Vec3A, prelude::*, render::primitives::Aabb};
-use bevy_rapier3d::render::RapierDebugRenderPlugin;
+
 use common::{
     game::{
         bundles::{AssetsLoading, PlayerBundleBuilder},
@@ -18,7 +18,6 @@ use crate::{
 
 use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
 
-use bevy::app::AppExit;
 use bevy_renet::renet::{ClientAuthentication, RenetClient, RenetError};
 use iyes_loopless::prelude::*;
 extern crate common;
@@ -62,13 +61,13 @@ pub fn switch(
             if client.is_connected() {
                 let mut texture_atlas_builder = TextureAtlasBuilder::default();
                 for handle in loadable_assets.block_textures.values() {
-                    for index in 0..handle.len() {
-                        let Some(texture) = textures.get(&handle[index]) else {
-            warn!("{:?} did not resolve to an `Image` asset.", asset_server.get_handle_path(&handle[index]));
+                    for item in handle {
+                        let Some(texture) = textures.get(item) else {
+            warn!("{:?} did not resolve to an `Image` asset.", asset_server.get_handle_path(item));
             continue;
         };
 
-                        texture_atlas_builder.add_texture(handle[index].clone(), texture);
+                        texture_atlas_builder.add_texture(item.clone(), texture);
                     }
                 }
 
@@ -100,11 +99,11 @@ fn panic_on_error_system(
 }
 
 // Move to game state
-fn disconnect_on_exit(exit: EventReader<AppExit>, mut client: ResMut<RenetClient>) {
-    if !exit.is_empty() && client.is_connected() {
-        client.disconnect();
-    }
-}
+// fn disconnect_on_exit(exit: EventReader<AppExit>, mut client: ResMut<RenetClient>) {
+//     if !exit.is_empty() && client.is_connected() {
+//         client.disconnect();
+//     }
+// }
 
 pub fn setup_resources(
     mut commands: Commands,
@@ -220,6 +219,7 @@ impl Plugin for LoadingPlugin {
             .add_enter_system(GameState::Loading, setup_resources)
             .add_system(load_blocks.run_in_state(GameState::Loading))
             .add_enter_system(GameState::Loading, load_entities)
+            .add_enter_system(GameState::Loading, load_sounds)
             .add_enter_system(GameState::Loading, new_client)
             .add_exit_system(GameState::Loading, despawn_with::<Loading>)
             .add_system(panic_on_error_system.run_in_state(GameState::Loading))

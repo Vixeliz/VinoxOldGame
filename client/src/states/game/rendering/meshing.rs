@@ -522,6 +522,7 @@ pub fn process_task(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_queue(
     mut chunk_queue: ResMut<ChunkQueue>,
     mut commands: Commands,
@@ -555,21 +556,12 @@ pub fn process_queue(
                     let mut uvs = Vec::new();
                     let mut ao = Vec::new();
                     for face in mesh_result.iter() {
-                        // if face.quad.voxel[0] as u32 == CHUNK_SIZE - 1
-                        //     && face.quad.voxel[1] == 1
-                        //     && face.quad.voxel[2] == 1
-                        // {
-                        //     if face.side.axis == Axis::X && face.side.positive == false {
-                        //         println!("positions: {:?}", face.positions(1.0));
-                        //     }
-                        //     // println!("face: axis {:?}:{:?}", face.side.axis, face.side.positive);
-                        // }
                         let calculated_ao = calculate_ao(
                             &raw_chunk,
                             face.side,
-                            face.quad.voxel[0] as u32,
-                            face.quad.voxel[1] as u32,
-                            face.quad.voxel[2] as u32,
+                            face.voxel()[0] as u32,
+                            face.voxel()[1] as u32,
+                            face.voxel()[2] as u32,
                             &cloned_types,
                         );
                         if (calculated_ao[1] + calculated_ao[3])
@@ -598,9 +590,9 @@ pub fn process_queue(
                                     &raw_chunk
                                         .get_state_for_index(
                                             raw_chunk.voxels[RawChunk::linearize(UVec3::new(
-                                                face.quad.voxel[0] as u32,
-                                                face.quad.voxel[1] as u32,
-                                                face.quad.voxel[2] as u32,
+                                                face.voxel()[0] as u32,
+                                                face.voxel()[1] as u32,
+                                                face.voxel()[2] as u32,
                                             ))]
                                                 as usize,
                                         )

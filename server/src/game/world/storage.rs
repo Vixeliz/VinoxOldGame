@@ -1,6 +1,6 @@
 use std::{
     io::Cursor,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, Mutex},
 };
 
 use bevy::prelude::*;
@@ -53,18 +53,15 @@ pub fn load_chunk(chunk_pos: IVec3, database: &Connection) -> Option<RawChunk> {
         "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
     );
     if let Ok(mut stmt) = stmt {
-        let chunk_iter = stmt
-            .query_map(
-                &[
-                    (":posx", &chunk_pos.x),
-                    (":posy", &chunk_pos.y),
-                    (":posz", &chunk_pos.z),
-                ],
-                |row| Ok(row.get(3).unwrap()),
-            )
-            .unwrap();
-        for chunk in chunk_iter {
-            let chunk_row: Vec<u8> = chunk.unwrap();
+        let chunk_result: Result<Vec<u8>, _> = stmt.query_row(
+            &[
+                (":posx", &chunk_pos.x),
+                (":posy", &chunk_pos.y),
+                (":posz", &chunk_pos.z),
+            ],
+            |row| Ok(row.get(3).unwrap()),
+        );
+        if let Ok(chunk_row) = chunk_result {
             let mut temp_output = Cursor::new(Vec::new());
             copy_decode(&chunk_row[..], &mut temp_output).unwrap();
             let final_chunk = bincode::deserialize(temp_output.get_ref()).unwrap();

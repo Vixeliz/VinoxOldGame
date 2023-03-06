@@ -1,17 +1,16 @@
 use std::{io::Cursor, time::Duration};
 
 use belly::prelude::*;
-use bevy::{core_pipeline::bloom::BloomSettings, prelude::*};
-use bevy_atmosphere::prelude::*;
+use bevy::prelude::*;
+
 use bevy_tweening::{
     lens::{TransformPositionLens, TransformRotationLens},
     *,
 };
 
-use bevy_rapier3d::prelude::{CharacterAutostep, CharacterLength, KinematicCharacterController};
 use bevy_renet::renet::RenetClient;
 use common::{
-    game::{bundles::PlayerBundleBuilder, world::chunk::Chunk},
+    game::bundles::PlayerBundleBuilder,
     networking::components::{
         ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
         ServerMessages,
@@ -21,9 +20,8 @@ use iyes_loopless::state::NextState;
 use zstd::stream::copy_decode;
 
 use crate::{
-    components::{Game, GameState},
+    components::GameState,
     states::game::{
-        input::FPSCamera,
         networking::components::ControlledPlayer,
         world::chunk::{CreateChunkEvent, PlayerChunk, SetBlockEvent},
     },
@@ -37,18 +35,16 @@ pub struct JustSpawned {
 }
 
 //TODO: Refactor this is a lot in one function
+#[allow(clippy::clone_on_copy)]
+#[allow(clippy::too_many_arguments)]
 pub fn client_sync_players(
     mut cmd1: Commands,
     mut cmd2: Commands,
     mut client: ResMut<RenetClient>,
     mut lobby: ResMut<ClientLobby>,
-    player_chunk: Res<PlayerChunk>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut entity_buffer: ResMut<EntityBuffer>,
-    asset_server: Res<AssetServer>,
     player_builder: Res<PlayerBundleBuilder>,
-    _meshes: ResMut<Assets<Mesh>>,
-    _materials: ResMut<Assets<StandardMaterial>>,
     mut chunk_event: EventWriter<CreateChunkEvent>,
     mut block_event: EventWriter<SetBlockEvent>,
 ) {

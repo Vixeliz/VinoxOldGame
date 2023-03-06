@@ -1,6 +1,5 @@
 use crate::networking::{components::ServerLobby, *};
 use bevy::prelude::*;
-use bevy_egui::EguiContext;
 use common::{
     game::{
         bundles::PlayerBundleBuilder,
@@ -10,21 +9,16 @@ use common::{
     networking::components::{server_connection_config, NetworkIP, PROTOCOL_ID},
 };
 use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
-use renet_visualizer::RenetServerVisualizer;
 
-pub fn setup(mut commands: Commands, mut chunk_manager: ChunkManager) {
+pub fn setup(mut commands: Commands, _chunk_manager: ChunkManager) {
     commands.spawn(LoadPoint(IVec3::new(0, 0, 0)));
 }
 
 use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
 
-use bevy::app::AppExit;
 use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig};
 
-use super::world::{
-    chunk::{ChunkGenerationPlugin, ChunkManager, LoadPoint},
-    storage::create_database,
-};
+use super::world::chunk::{ChunkGenerationPlugin, ChunkManager, LoadPoint};
 
 extern crate common;
 
@@ -61,11 +55,11 @@ fn panic_on_error_system(mut renet_error: EventReader<RenetError>) {
     }
 }
 
-fn disconnect_clients_on_exit(exit: EventReader<AppExit>, mut server: ResMut<RenetServer>) {
-    if !exit.is_empty() {
-        server.disconnect_clients();
-    }
-}
+// fn disconnect_clients_on_exit(exit: EventReader<AppExit>, mut server: ResMut<RenetServer>) {
+//     if !exit.is_empty() {
+//         server.disconnect_clients();
+//     }
+// }
 
 pub fn setup_builders(mut commands: Commands) {
     commands.insert_resource(PlayerBundleBuilder {
@@ -88,16 +82,6 @@ impl Plugin for GamePlugin {
             .add_fixed_timestep_system("network_update", 0, syncing::block_sync)
             .add_fixed_timestep_system("network_update", 0, syncing::send_chunks)
             .add_startup_system(setup)
-            // .add_system(update_visulizer_system)
             .insert_resource(ServerLobby::default());
     }
-}
-
-pub fn update_visulizer_system(
-    mut egui_context: ResMut<EguiContext>,
-    mut visualizer: ResMut<RenetServerVisualizer<200>>,
-    server: Res<RenetServer>,
-) {
-    visualizer.update(&server);
-    visualizer.show_window(egui_context.ctx_mut());
 }

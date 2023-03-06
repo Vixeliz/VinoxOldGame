@@ -1,15 +1,15 @@
 use bevy::{
     app::ScheduleRunnerSettings, diagnostic::DiagnosticsPlugin, log::LogPlugin, prelude::*,
 };
-use bevy_egui::{EguiContext, EguiPlugin};
-use bevy_renet::{renet::RenetServer, RenetServerPlugin};
+
+use bevy_renet::RenetServerPlugin;
 use common::networking::components::NetworkIP;
 use game::{
     setup::GamePlugin,
     world::storage::{create_database, WorldDatabase},
 };
 use iyes_loopless::prelude::*;
-use renet_visualizer::{RenetClientVisualizer, RenetServerVisualizer};
+
 use rusqlite::*;
 use std::{
     env,
@@ -49,11 +49,9 @@ fn main() {
             connection: Arc::new(Mutex::new(database)),
         })
         .insert_resource(NetworkIP(ip))
-        // .add_plugins(DefaultPlugins)
         .add_plugins(MinimalPlugins)
         .add_plugin(DiagnosticsPlugin)
         .add_plugin(LogPlugin::default())
-        // .add_plugin(EguiPlugin)
         .add_plugin(RenetServerPlugin::default())
         .add_fixed_timestep(
             Duration::from_millis(16),
@@ -64,6 +62,5 @@ fn main() {
         .add_fixed_timestep_child_stage("network_update")
         .add_fixed_timestep_child_stage("fixed_update") // Send packets at simulation speed
         .add_plugin(GamePlugin)
-        // .insert_resource(RenetServerVisualizer::<200>::default())
         .run();
 }

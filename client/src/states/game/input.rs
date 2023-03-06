@@ -8,43 +8,36 @@ use bevy::{
 };
 use bevy_atmosphere::prelude::AtmosphereCamera;
 use bevy_egui::EguiContext;
-use bevy_rapier3d::{
-    prelude::{
-        Collider, CollisionGroups, Group, KinematicCharacterController,
-        KinematicCharacterControllerOutput, QueryFilter, RapierConfiguration, RapierContext, Rot,
-        SolverGroups, Vect, Velocity,
-    },
-    rapier::prelude::InteractionGroups,
+use bevy_rapier3d::prelude::{
+    Collider, CollisionGroups, Group, QueryFilter, RapierContext, Rot, SolverGroups, Vect,
 };
 use bevy_renet::renet::RenetClient;
 use common::{
-    game::world::chunk::{
-        world_to_voxel, Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility,
-        CHUNK_SIZE,
-    },
+    game::world::chunk::{world_to_voxel, ChunkComp, LoadableTypes, CHUNK_SIZE},
     networking::components::{self, ClientChannel},
 };
-use renet_visualizer::{RenetClientVisualizer, RenetVisualizerStyle};
+use renet_visualizer::RenetClientVisualizer;
 
 use super::{
     networking::components::ControlledPlayer,
-    world::chunk::{world_to_chunk, CurrentChunks, DirtyChunk, PlayerChunk, ViewDistance},
+    world::chunk::{world_to_chunk, CurrentChunks, DirtyChunk},
 };
 use bevy_rapier3d::prelude::TOIStatus::Converged;
 
 // HEAVILY TEMPORARY BOYFRIEND WANTED ITEMS TO BUILD WITH
 #[derive(Default, Clone)]
 pub enum CurrentItem {
-    GRASS,
-    DIRT,
+    Grass,
+    Dirt,
     #[default]
-    GREYBRICK,
-    MOSS,
-    WOOD,
-    CONCRETE,
-    COBBLESTONE,
+    Greybrick,
+    Moss,
+    Wood,
+    Concrete,
+    Cobblestone,
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn interact(
     mut commands: Commands,
     mut chunks: Query<&mut ChunkComp>,
@@ -58,24 +51,24 @@ pub fn interact(
     mut current_item: Local<CurrentItem>,
 ) {
     let item_string = match current_item.clone() {
-        CurrentItem::GRASS => "vinoxgrass",
-        CurrentItem::DIRT => "vinoxdirt",
-        CurrentItem::CONCRETE => "vinoxconcrete",
-        CurrentItem::COBBLESTONE => "vinoxcobblestone",
-        CurrentItem::MOSS => "vinoxmoss",
-        CurrentItem::WOOD => "vinoxwood",
-        CurrentItem::GREYBRICK => "vinoxgreybrick",
+        CurrentItem::Grass => "vinoxgrass",
+        CurrentItem::Dirt => "vinoxdirt",
+        CurrentItem::Concrete => "vinoxconcrete",
+        CurrentItem::Cobblestone => "vinoxcobblestone",
+        CurrentItem::Moss => "vinoxmoss",
+        CurrentItem::Wood => "vinoxwood",
+        CurrentItem::Greybrick => "vinoxgreybrick",
     };
 
     for key in keys.get_just_pressed() {
         match key {
-            KeyCode::Key1 => *current_item = CurrentItem::DIRT,
-            KeyCode::Key2 => *current_item = CurrentItem::GRASS,
-            KeyCode::Key3 => *current_item = CurrentItem::CONCRETE,
-            KeyCode::Key4 => *current_item = CurrentItem::COBBLESTONE,
-            KeyCode::Key5 => *current_item = CurrentItem::MOSS,
-            KeyCode::Key6 => *current_item = CurrentItem::WOOD,
-            KeyCode::Key7 => *current_item = CurrentItem::GREYBRICK,
+            KeyCode::Key1 => *current_item = CurrentItem::Dirt,
+            KeyCode::Key2 => *current_item = CurrentItem::Grass,
+            KeyCode::Key3 => *current_item = CurrentItem::Concrete,
+            KeyCode::Key4 => *current_item = CurrentItem::Cobblestone,
+            KeyCode::Key5 => *current_item = CurrentItem::Moss,
+            KeyCode::Key6 => *current_item = CurrentItem::Wood,
+            KeyCode::Key7 => *current_item = CurrentItem::Greybrick,
             _ => {}
         }
     }
@@ -103,12 +96,12 @@ pub fn interact(
                     if let Some(chunk_entity) = current_chunks.get_entity(pos.0) {
                         if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
                             if mouse_right {
-                                if ((point.x as f32) <= player_transform.translation.x - 0.5
-                                    || (point.x as f32) >= player_transform.translation.x + 0.5)
-                                    || ((point.z as f32) <= player_transform.translation.z - 0.5
-                                        || (point.z as f32) >= player_transform.translation.z + 0.5)
-                                    || ((point.y as f32) <= player_transform.translation.y - 2.0
-                                        || (point.y as f32) >= player_transform.translation.y + 1.0)
+                                if (point.x <= player_transform.translation.x - 0.5
+                                    || point.x >= player_transform.translation.x + 0.5)
+                                    || (point.z <= player_transform.translation.z - 0.5
+                                        || point.z >= player_transform.translation.z + 0.5)
+                                    || (point.y <= player_transform.translation.y - 2.0
+                                        || point.y >= player_transform.translation.y + 1.0)
                                 {
                                     chunk.chunk_data.add_block_state(&item_string.to_string());
                                     chunk.chunk_data.set_block(pos.1, item_string.to_string());
@@ -220,7 +213,7 @@ pub fn spawn_camera(
         return;
     }
     if let Ok(player_entity) = player_entity.get_single() {
-        let mut window = windows.get_primary_mut().unwrap();
+        let window = windows.get_primary_mut().unwrap();
         window.set_cursor_grab_mode(CursorGrabMode::Locked);
         window.set_cursor_visibility(false);
 
@@ -292,7 +285,6 @@ pub fn collision_movement_system(
             exclude_collider: None,
             exclude_rigid_body: None,
             predicate: None,
-            ..default()
         };
 
         loop {
@@ -353,6 +345,7 @@ pub fn collision_movement_system(
 #[derive(Resource)]
 pub struct MouseSensitivity(pub f32);
 
+#[allow(clippy::too_many_arguments)]
 pub fn movement_input_system(
     mut player: Query<&mut FPSCamera>,
     player_position: Query<&Transform, With<ControlledPlayer>>,
@@ -363,9 +356,9 @@ pub fn movement_input_system(
     mut windows: ResMut<Windows>,
     time: Res<Time>,
     mut stationary_frames: Local<i32>,
-    mut chunks: Query<&mut ChunkComp>,
+    _chunks: Query<&mut ChunkComp>,
     current_chunks: Res<CurrentChunks>,
-    loadable_types: Res<LoadableTypes>,
+    _loadable_types: Res<LoadableTypes>,
 ) {
     if let Ok(translation) = player_position.get_single() {
         let translation = translation.translation;

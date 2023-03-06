@@ -2,7 +2,7 @@ use crate::networking::syncing::SentChunks;
 
 use super::{
     generation::generate_chunk,
-    storage::{create_database, insert_chunk, load_chunk, WorldDatabase},
+    storage::{insert_chunk, load_chunk, WorldDatabase},
 };
 use bevy::{
     ecs::{schedule::ShouldRun, system::SystemParam},
@@ -10,13 +10,9 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
     utils::FloatOrd,
 };
-use common::{
-    game::world::chunk::{ChunkComp, ChunkPos, CHUNK_SIZE},
-    networking::components::Player,
-};
+use common::game::world::chunk::{ChunkComp, ChunkPos, CHUNK_SIZE};
 use futures_lite::future;
 use rustc_data_structures::stable_map::FxHashMap;
-use std::collections::*;
 
 #[derive(Resource, Default, Debug)]
 pub struct CurrentChunks {
@@ -79,17 +75,17 @@ pub struct ChunkQueue {
 
 #[derive(SystemParam)]
 pub struct ChunkManager<'w, 's> {
-    commands: Commands<'w, 's>,
+    // commands: Commands<'w, 's>,
     current_chunks: ResMut<'w, CurrentChunks>,
-    chunk_queue: ResMut<'w, ChunkQueue>,
+    // chunk_queue: ResMut<'w, ChunkQueue>,
     view_distance: Res<'w, ViewDistance>,
     chunk_query: Query<'w, 's, &'static ChunkComp>,
 }
 
 impl<'w, 's> ChunkManager<'w, 's> {
-    pub fn add_chunk_to_queue(&mut self, pos: IVec3) {
-        self.chunk_queue.create.push(pos);
-    }
+    // pub fn add_chunk_to_queue(&mut self, pos: IVec3) {
+    //     self.chunk_queue.create.push(pos);
+    // }
 
     pub fn get_chunks_around_chunk(
         &mut self,
@@ -139,7 +135,7 @@ pub fn generate_chunks_world(
     mut chunk_queue: ResMut<ChunkQueue>,
     mut current_chunks: ResMut<CurrentChunks>,
     mut commands: Commands,
-    mut database: Res<WorldDatabase>,
+    database: Res<WorldDatabase>,
 ) {
     for point in load_points.iter() {
         for x in -view_distance.horizontal..view_distance.horizontal {
@@ -231,7 +227,7 @@ pub struct ChunkGenTask(Task<ChunkComp>);
 pub fn process_task(
     mut commands: Commands,
     mut chunk_query: Query<(Entity, &mut ChunkGenTask)>,
-    mut database: Res<WorldDatabase>,
+    database: Res<WorldDatabase>,
 ) {
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
