@@ -7,7 +7,7 @@ use common::{
     game::{bundles::PlayerBundleBuilder, world::chunk::ChunkComp},
     networking::components::{
         self, ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
-        ServerMessages,
+        ServerMessages, RELIABLE_CHANNEL_MAX_LENGTH,
     },
 };
 use rand::seq::{IteratorRandom, SliceRandom};
@@ -146,7 +146,9 @@ pub fn send_chunks(
                         let mut final_chunk = Cursor::new(raw_chunk_bin);
                         let mut output = Cursor::new(Vec::new());
                         copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-                        if size_of_val(output.get_ref().as_slice()) <= 10000 {
+                        if size_of_val(output.get_ref().as_slice())
+                            <= RELIABLE_CHANNEL_MAX_LENGTH as usize
+                        {
                             server.send_message(
                                 client_id,
                                 ServerChannel::LevelDataSmall,

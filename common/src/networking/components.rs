@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use crate::game::world::chunk::RawChunk;
 
 pub const PROTOCOL_ID: u64 = 7;
+pub const RELIABLE_CHANNEL_MAX_LENGTH: u64 = 10240;
 
 #[derive(Component)]
 pub struct NetworkedEntity;
@@ -97,12 +98,14 @@ impl ClientChannel {
             UnreliableChannelConfig {
                 channel_id: Self::Position.into(),
                 sequenced: true,
+                message_send_queue_size: 2048,
+                message_receive_queue_size: 2048,
                 ..Default::default()
             }
             .into(),
             ReliableChannelConfig {
                 channel_id: Self::Commands.into(),
-                message_resend_time: Duration::from_millis(16),
+                message_resend_time: Duration::ZERO,
                 ..Default::default()
             }
             .into(),
@@ -125,6 +128,8 @@ impl ServerChannel {
             UnreliableChannelConfig {
                 channel_id: Self::NetworkedEntities.into(),
                 sequenced: true, // We don't care about old positions
+                message_send_queue_size: 2048,
+                message_receive_queue_size: 2048,
                 ..Default::default()
             }
             .into(),
@@ -142,10 +147,11 @@ impl ServerChannel {
             .into(),
             ReliableChannelConfig {
                 channel_id: Self::LevelDataSmall.into(),
-                max_message_size: 10000,
-                packet_budget: 100000,
-                message_send_queue_size: 1000000,
-                message_receive_queue_size: 1000000,
+                message_resend_time: Duration::ZERO,
+                max_message_size: RELIABLE_CHANNEL_MAX_LENGTH,
+                packet_budget: RELIABLE_CHANNEL_MAX_LENGTH * 2,
+                message_send_queue_size: (RELIABLE_CHANNEL_MAX_LENGTH * 3) as usize,
+                message_receive_queue_size: (RELIABLE_CHANNEL_MAX_LENGTH * 3) as usize,
                 ..Default::default()
             }
             .into(),
@@ -168,7 +174,7 @@ pub fn client_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: ClientChannel::channels_config(),
         receive_channels_config: ServerChannel::channels_config(),
-        max_packet_size: 200000,
+        max_packet_size: RELIABLE_CHANNEL_MAX_LENGTH * 4,
         ..Default::default()
     }
 }
@@ -177,7 +183,7 @@ pub fn server_connection_config() -> RenetConnectionConfig {
     RenetConnectionConfig {
         send_channels_config: ServerChannel::channels_config(),
         receive_channels_config: ClientChannel::channels_config(),
-        max_packet_size: 200000,
+        max_packet_size: RELIABLE_CHANNEL_MAX_LENGTH * 4,
         ..Default::default()
     }
 }
