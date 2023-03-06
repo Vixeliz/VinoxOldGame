@@ -13,15 +13,14 @@ use bevy_rapier3d::prelude::{
 };
 use bevy_renet::renet::RenetClient;
 use common::{
-    game::world::chunk::{world_to_voxel, ChunkComp, LoadableTypes, CHUNK_SIZE},
+    game::world::chunk::{
+        world_to_chunk, world_to_voxel, ChunkComp, CurrentChunks, LoadableTypes, CHUNK_SIZE,
+    },
     networking::components::{self, ClientChannel},
 };
 use renet_visualizer::RenetClientVisualizer;
 
-use super::{
-    networking::components::ControlledPlayer,
-    world::chunk::{world_to_chunk, CurrentChunks, DirtyChunk},
-};
+use super::{networking::components::ControlledPlayer, world::chunk::DirtyChunk};
 use bevy_rapier3d::prelude::TOIStatus::Converged;
 
 // HEAVILY TEMPORARY BOYFRIEND WANTED ITEMS TO BUILD WITH

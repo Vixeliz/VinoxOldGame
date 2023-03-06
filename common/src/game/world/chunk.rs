@@ -15,10 +15,53 @@ pub const CHUNK_BOUND: u32 = CHUNK_SIZE + 1;
 pub const TOTAL_CHUNK_SIZE: u32 = CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED * CHUNK_SIZE_PADDED;
 pub const TOTAL_CHUNK_USIZE: usize = TOTAL_CHUNK_SIZE as usize;
 
+#[derive(Component, Default)]
+pub struct RemoveChunk;
+
 #[derive(Resource, Default, Clone)]
 pub struct LoadableTypes {
     pub entities: HashMap<String, EntityType>,
     pub blocks: HashMap<String, BlockType>,
+}
+
+#[derive(Resource, Default)]
+pub struct CurrentChunks {
+    pub chunks: HashMap<IVec3, Entity>,
+}
+
+impl CurrentChunks {
+    pub fn insert_entity(&mut self, pos: IVec3, entity: Entity) {
+        self.chunks.insert(pos, entity);
+    }
+
+    pub fn remove_entity(&mut self, pos: IVec3) -> Option<Entity> {
+        self.chunks.remove(&pos)
+    }
+
+    pub fn get_entity(&self, pos: IVec3) -> Option<Entity> {
+        self.chunks.get(&pos).copied()
+    }
+    pub fn all_neighbors_exist(&self, pos: IVec3, _min_bound: IVec2, _max_bound: IVec2) -> bool {
+        self.chunks.contains_key(&(pos + IVec3::new(0, 1, 0)))
+            && self.chunks.contains_key(&(pos + IVec3::new(0, -1, 0)))
+            && self.chunks.contains_key(&(pos + IVec3::new(1, 0, 0)))
+            && self.chunks.contains_key(&(pos + IVec3::new(-1, 0, 0)))
+            && self.chunks.contains_key(&(pos + IVec3::new(0, 0, 1)))
+            && self.chunks.contains_key(&(pos + IVec3::new(0, 0, -1)))
+    }
+}
+
+#[derive(Default, Resource)]
+pub struct ViewDistance {
+    pub horizontal: i32,
+    pub vertical: i32,
+}
+
+#[derive(Default, Resource)]
+pub struct SimulationDistance {
+    pub width: i32,
+    pub depth: i32,
+    pub height: i32,
 }
 
 pub trait Chunk {

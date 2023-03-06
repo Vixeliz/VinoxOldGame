@@ -1,19 +1,15 @@
-use std::collections::HashMap;
-
 use bevy::{ecs::schedule::ShouldRun, prelude::*, render::primitives::Aabb};
 use bevy_rapier3d::prelude::Collider;
 
 use common::game::world::chunk::{
-    Chunk, ChunkComp, ChunkPos, LoadableTypes, RawChunk, CHUNK_BOUND, CHUNK_SIZE,
+    world_to_chunk, Chunk, ChunkComp, ChunkPos, CurrentChunks, LoadableTypes, RawChunk,
+    RemoveChunk, SimulationDistance, ViewDistance, CHUNK_BOUND, CHUNK_SIZE,
 };
 
 use crate::states::game::{
     networking::components::ControlledPlayer,
     rendering::meshing::{build_mesh, MeshChunkEvent},
 };
-
-#[derive(Component, Default)]
-pub struct RemoveChunk;
 
 #[derive(Component)]
 pub struct DirtyChunk;
@@ -45,46 +41,6 @@ pub struct UpdateChunkEvent {
     pub pos: IVec3,
 }
 
-#[derive(Resource, Default)]
-pub struct CurrentChunks {
-    pub chunks: HashMap<IVec3, Entity>,
-}
-
-impl CurrentChunks {
-    pub fn insert_entity(&mut self, pos: IVec3, entity: Entity) {
-        self.chunks.insert(pos, entity);
-    }
-
-    pub fn remove_entity(&mut self, pos: IVec3) -> Option<Entity> {
-        self.chunks.remove(&pos)
-    }
-
-    pub fn get_entity(&self, pos: IVec3) -> Option<Entity> {
-        self.chunks.get(&pos).copied()
-    }
-    pub fn all_neighbors_exist(&self, pos: IVec3, _min_bound: IVec2, _max_bound: IVec2) -> bool {
-        self.chunks.contains_key(&(pos + IVec3::new(0, 1, 0)))
-            && self.chunks.contains_key(&(pos + IVec3::new(0, -1, 0)))
-            && self.chunks.contains_key(&(pos + IVec3::new(1, 0, 0)))
-            && self.chunks.contains_key(&(pos + IVec3::new(-1, 0, 0)))
-            && self.chunks.contains_key(&(pos + IVec3::new(0, 0, 1)))
-            && self.chunks.contains_key(&(pos + IVec3::new(0, 0, -1)))
-    }
-}
-
-#[derive(Default, Resource)]
-pub struct ViewDistance {
-    pub horizontal: i32,
-    pub vertical: i32,
-}
-
-#[derive(Default, Resource)]
-pub struct SimulationDistance {
-    pub width: i32,
-    pub depth: i32,
-    pub height: i32,
-}
-
 #[derive(Default, Resource)]
 pub struct ChunkQueue {
     pub mesh: Vec<(IVec3, RawChunk)>,
@@ -114,14 +70,6 @@ pub fn update_player_location(
         player_chunk.chunk_pos = world_to_chunk(player_transform.translation);
         player_chunk.raw_pos = player_transform.translation;
     }
-}
-
-pub fn world_to_chunk(pos: Vec3) -> IVec3 {
-    IVec3::new(
-        (pos.x / (CHUNK_SIZE as f32)).floor() as i32,
-        (pos.y / (CHUNK_SIZE as f32)).floor() as i32,
-        (pos.z / (CHUNK_SIZE as f32)).floor() as i32,
-    )
 }
 
 pub fn delete_chunks(

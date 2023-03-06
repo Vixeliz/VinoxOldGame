@@ -10,28 +10,10 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
     utils::FloatOrd,
 };
-use common::game::world::chunk::{ChunkComp, ChunkPos, CHUNK_SIZE};
+use common::game::world::chunk::{
+    ChunkComp, ChunkPos, CurrentChunks, RemoveChunk, SimulationDistance, ViewDistance,
+};
 use futures_lite::future;
-use rustc_data_structures::stable_map::FxHashMap;
-
-#[derive(Resource, Default, Debug)]
-pub struct CurrentChunks {
-    pub chunks: FxHashMap<IVec3, Entity>,
-}
-
-impl CurrentChunks {
-    pub fn insert_entity(&mut self, pos: IVec3, entity: Entity) {
-        self.chunks.insert(pos, entity);
-    }
-
-    pub fn remove_entity(&mut self, pos: IVec3) -> Option<Entity> {
-        self.chunks.remove(&pos)
-    }
-
-    pub fn get_entity(&self, pos: IVec3) -> Option<Entity> {
-        self.chunks.get(&pos).copied()
-    }
-}
 
 #[derive(Component, Default, Clone)]
 pub struct LoadPoint(pub IVec3);
@@ -49,22 +31,6 @@ impl LoadPoint {
         }
         true
     }
-}
-
-#[derive(Component, Default)]
-pub struct RemoveChunk;
-
-#[derive(Default, Resource)]
-pub struct ViewDistance {
-    pub vertical: i32,
-    pub horizontal: i32,
-}
-
-#[derive(Default, Resource)]
-pub struct SimulationDistance {
-    pub width: i32,
-    pub depth: i32,
-    pub height: i32,
 }
 
 #[derive(Default, Resource, Debug)]
@@ -111,14 +77,6 @@ impl<'w, 's> ChunkManager<'w, 's> {
 
         res
     }
-}
-
-pub fn world_to_chunk(pos: Vec3) -> IVec3 {
-    IVec3::new(
-        (pos.x / (CHUNK_SIZE as f32)).floor() as i32,
-        (pos.y / (CHUNK_SIZE as f32)).floor() as i32,
-        (pos.z / (CHUNK_SIZE as f32)).floor() as i32,
-    )
 }
 
 pub fn should_update_chunks(load_points: Query<&LoadPoint, Changed<LoadPoint>>) -> ShouldRun {

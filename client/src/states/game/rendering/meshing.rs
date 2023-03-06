@@ -6,15 +6,14 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Collider;
 use common::game::world::chunk::{
-    Chunk, ChunkComp, LoadableTypes, RawChunk, Voxel, VoxelVisibility, CHUNK_SIZE,
+    Chunk, ChunkComp, CurrentChunks, LoadableTypes, RawChunk, ViewDistance, Voxel, VoxelVisibility,
+    CHUNK_SIZE,
 };
 use futures_lite::future;
 use itertools::Itertools;
 
 use crate::states::{
-    game::world::chunk::{
-        ChunkCollider, ChunkQueue, CurrentChunks, PlayerChunk, RenderedChunk, ViewDistance,
-    },
+    game::world::chunk::{ChunkCollider, ChunkQueue, PlayerChunk, RenderedChunk},
     loading::LoadableAssets,
 };
 

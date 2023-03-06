@@ -3,7 +3,10 @@ use std::{io::Cursor, mem::size_of_val};
 use bevy::prelude::*;
 use bevy_renet::renet::{RenetServer, ServerEvent};
 use common::{
-    game::{bundles::PlayerBundleBuilder, world::chunk::ChunkComp},
+    game::{
+        bundles::PlayerBundleBuilder,
+        world::chunk::{world_to_chunk, ChunkComp, CurrentChunks},
+    },
     networking::components::{
         self, ClientChannel, LevelData, NetworkedEntities, Player, PlayerPos, ServerChannel,
         ServerMessages, RELIABLE_CHANNEL_MAX_LENGTH,
@@ -14,7 +17,7 @@ use rustc_data_structures::stable_set::FxHashSet;
 use zstd::stream::copy_encode;
 
 use crate::game::world::{
-    chunk::{world_to_chunk, ChunkManager, CurrentChunks, LoadPoint},
+    chunk::{ChunkManager, LoadPoint},
     storage::{insert_chunk, WorldDatabase},
 };
 
