@@ -1,7 +1,7 @@
 use std::collections::{HashMap, HashSet};
 
 use belly::prelude::*;
-use bevy::{ecs::schedule::ShouldRun, prelude::*};
+use bevy::{ecs::schedule::ShouldRun, prelude::*, render::primitives::Aabb};
 use bevy_rapier3d::prelude::Collider;
 
 use common::game::world::chunk::{
@@ -24,6 +24,7 @@ pub struct DirtyChunk;
 pub struct RenderedChunk {
     #[bundle]
     pub mesh: PbrBundle,
+    pub aabb: Aabb,
     // pub collider: Collider,
 }
 

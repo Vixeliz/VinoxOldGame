@@ -1,6 +1,7 @@
 use bevy::{
+    math::Vec3A,
     prelude::*,
-    render::{mesh::Indices, render_resource::PrimitiveTopology},
+    render::{mesh::Indices, primitives::Aabb, render_resource::PrimitiveTopology},
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_rapier3d::prelude::Collider;
@@ -474,6 +475,18 @@ pub fn process_task(
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
                 commands.entity(chunk_entity).insert((
                     RenderedChunk {
+                        aabb: Aabb {
+                            center: Vec3A::new(
+                                (CHUNK_SIZE / 2) as f32,
+                                (CHUNK_SIZE / 2) as f32,
+                                (CHUNK_SIZE / 2) as f32,
+                            ),
+                            half_extents: Vec3A::new(
+                                (CHUNK_SIZE / 2) as f32,
+                                (CHUNK_SIZE / 2) as f32,
+                                (CHUNK_SIZE / 2) as f32,
+                            ),
+                        },
                         mesh: PbrBundle {
                             mesh: meshes.add(chunk.chunk_mesh.clone()),
                             material: materials.add(StandardMaterial {
