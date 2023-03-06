@@ -225,18 +225,6 @@ pub fn process_queue(
         });
 }
 
-/// Label for the stage housing the chunk loading systems.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, StageLabel)]
-pub struct ChunkLoadingStage;
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, SystemLabel)]
-pub enum ChunkLoadingSystem {
-    /// Runs chunk view distance calculations and queue events for chunk creations and deletions.
-    UpdateChunks,
-    /// Creates the voxel buffers to hold chunk data and attach them a chunk entity in the ECS world.
-    CreateChunks,
-}
-
 pub struct ChunkGenerationPlugin;
 
 impl Plugin for ChunkGenerationPlugin {
@@ -252,31 +240,10 @@ impl Plugin for ChunkGenerationPlugin {
                 height: 4,
                 depth: 4,
             })
-            .add_stage_after(
-                CoreStage::Update,
-                ChunkLoadingStage,
-                SystemStage::parallel()
-                    .with_system(
-                        clear_unloaded_chunks
-                            .label(ChunkLoadingSystem::UpdateChunks)
-                            .with_run_criteria(should_update_chunks),
-                    )
-                    .with_system(
-                        unsend_chunks
-                            .label(ChunkLoadingSystem::UpdateChunks)
-                            .with_run_criteria(should_update_chunks),
-                    )
-                    .with_system(
-                        generate_chunks_world
-                            .label(ChunkLoadingSystem::UpdateChunks)
-                            .with_run_criteria(should_update_chunks),
-                    )
-                    .with_system(
-                        process_queue
-                            .label(ChunkLoadingSystem::CreateChunks)
-                            .after(ChunkLoadingSystem::UpdateChunks),
-                    ),
-            )
+            .add_system(clear_unloaded_chunks.with_run_criteria(should_update_chunks))
+            .add_system(unsend_chunks.with_run_criteria(should_update_chunks))
+            .add_system(generate_chunks_world.with_run_criteria(should_update_chunks))
+            .add_system(process_queue.after(clear_unloaded_chunks))
             .add_system_to_stage(CoreStage::Last, destroy_chunks)
             .add_system(process_task);
     }
