@@ -638,10 +638,10 @@ pub fn movement_input_system(
 
             movement = movement.normalize_or_zero();
 
-            if fps_camera.velocity.y.abs() < 0.001 {
-                *stationary_frames += 1;
-            } else {
-                *stationary_frames = 0;
+            if fps_camera.velocity.y.abs() < 0.001 && *stationary_frames < 10 {
+                *stationary_frames += 4;
+            } else if *stationary_frames >= 0 {
+                *stationary_frames -= 1;
             }
 
             let y = fps_camera.velocity.y;
