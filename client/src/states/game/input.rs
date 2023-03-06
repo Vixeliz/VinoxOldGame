@@ -32,16 +32,54 @@ use super::{
 };
 use bevy_rapier3d::prelude::TOIStatus::Converged;
 
+// HEAVILY TEMPORARY BOYFRIEND WANTED ITEMS TO BUILD WITH
+#[derive(Default, Clone)]
+pub enum CurrentItem {
+    GRASS,
+    DIRT,
+    #[default]
+    GREYBRICK,
+    MOSS,
+    WOOD,
+    CONCRETE,
+    COBBLESTONE,
+}
+
 pub fn interact(
     mut commands: Commands,
     mut chunks: Query<&mut ChunkComp>,
     mouse_button_input: Res<Input<MouseButton>>,
+    keys: Res<Input<KeyCode>>,
     current_chunks: Res<CurrentChunks>,
     camera_query: Query<&GlobalTransform, With<Camera>>,
     rapier_context: Res<RapierContext>,
     mut client: ResMut<RenetClient>,
     player_position: Query<&Transform, With<ControlledPlayer>>,
+    mut current_item: Local<CurrentItem>,
 ) {
+    let item_string = match current_item.clone() {
+        CurrentItem::GRASS => "vinoxgrass",
+        CurrentItem::DIRT => "vinoxdirt",
+        CurrentItem::CONCRETE => "vinoxconcrete",
+        CurrentItem::COBBLESTONE => "vinoxcobblestone",
+        CurrentItem::MOSS => "vinoxmoss",
+        CurrentItem::WOOD => "vinoxwood",
+        CurrentItem::GREYBRICK => "vinoxgreybrick",
+    };
+
+    for key in keys.get_just_pressed() {
+        match key {
+            KeyCode::Key1 => *current_item = CurrentItem::DIRT,
+            KeyCode::Key2 => *current_item = CurrentItem::GRASS,
+            KeyCode::Key3 => *current_item = CurrentItem::CONCRETE,
+            KeyCode::Key4 => *current_item = CurrentItem::COBBLESTONE,
+            KeyCode::Key5 => *current_item = CurrentItem::MOSS,
+            KeyCode::Key6 => *current_item = CurrentItem::WOOD,
+            KeyCode::Key7 => *current_item = CurrentItem::GREYBRICK,
+            _ => {}
+        }
+    }
+
     let mouse_left = mouse_button_input.just_pressed(MouseButton::Left);
     let mouse_right = mouse_button_input.just_pressed(MouseButton::Right);
     if let Ok(player_transform) = player_position.get_single() {
@@ -72,16 +110,12 @@ pub fn interact(
                                     || ((point.y as f32) <= player_transform.translation.y - 2.0
                                         || (point.y as f32) >= player_transform.translation.y + 1.0)
                                 {
-                                    chunk
-                                        .chunk_data
-                                        .add_block_state(&"vinoxgreybrick".to_string());
-                                    chunk
-                                        .chunk_data
-                                        .set_block(pos.1, "vinoxgreybrick".to_string());
+                                    chunk.chunk_data.add_block_state(&item_string.to_string());
+                                    chunk.chunk_data.set_block(pos.1, item_string.to_string());
                                     let send_block = components::Commands::SentBlock {
                                         chunk_pos: pos.0.into(),
                                         voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
-                                        block_type: "vinoxgreybrick".to_string(),
+                                        block_type: item_string.to_string(),
                                     };
                                     let input_message = bincode::serialize(&send_block).unwrap();
 
