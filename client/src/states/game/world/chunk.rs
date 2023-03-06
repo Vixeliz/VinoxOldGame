@@ -347,22 +347,6 @@ pub fn receive_chunks(
     }
 }
 
-/// Label for the stage housing the chunk loading systems.
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, StageLabel)]
-pub struct ChunkLoadingStage;
-
-#[derive(PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Debug, Hash, SystemLabel)]
-
-pub enum ChunkLoadingSystem {
-    /// Runs chunk view distance calculations and queue events for chunk creations and deletions.
-    UpdateChunks,
-    ReceiveChunks,
-    DirtyChunks,
-    /// Creates the voxel buffers to hold chunk data and attach them a chunk entity in the ECS world.
-    CreateChunks,
-    UpdatePlayer,
-}
-
 pub struct ChunkHandling;
 
 impl Plugin for ChunkHandling {
@@ -379,38 +363,16 @@ impl Plugin for ChunkHandling {
                 height: 4,
                 depth: 4,
             })
-            .add_stage_after(
-                CoreStage::Update,
-                ChunkLoadingStage,
-                SystemStage::parallel()
-                    .with_system(update_player_location.label(ChunkLoadingSystem::UpdatePlayer))
-                    .with_system(
-                        receive_chunks
-                            .label(ChunkLoadingSystem::ReceiveChunks)
-                            .after(ChunkLoadingSystem::DirtyChunks),
-                    )
-                    .with_system(
-                        set_block
-                            .label(ChunkLoadingSystem::ReceiveChunks)
-                            .after(ChunkLoadingSystem::DirtyChunks),
-                    )
-                    .with_system(
-                        clear_unloaded_chunks
-                            .label(ChunkLoadingSystem::UpdateChunks)
-                            .after(ChunkLoadingSystem::ReceiveChunks)
-                            .with_run_criteria(should_update_chunks),
-                    )
-                    .with_system(
-                        update_borders
-                            .label(ChunkLoadingSystem::DirtyChunks)
-                            .after(ChunkLoadingSystem::UpdatePlayer),
-                    )
-                    .with_system(
-                        build_mesh
-                            .label(ChunkLoadingSystem::CreateChunks)
-                            .after(ChunkLoadingSystem::UpdateChunks),
-                    ),
+            .add_system(update_player_location)
+            .add_system(update_borders.after(update_player_location))
+            .add_system(receive_chunks.after(update_borders))
+            .add_system(set_block.after(update_borders))
+            .add_system(
+                clear_unloaded_chunks
+                    .after(receive_chunks)
+                    .with_run_criteria(should_update_chunks),
             )
+            .add_system(build_mesh.after(clear_unloaded_chunks))
             .add_system_to_stage(CoreStage::Last, delete_chunks)
             .add_event::<UpdateChunkEvent>()
             .add_event::<SetBlockEvent>()
