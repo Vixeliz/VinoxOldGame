@@ -1,5 +1,6 @@
 /target
 run.sh
+run-release.sh
 .DS_Store
 *.DS_Store
 *.tracy
