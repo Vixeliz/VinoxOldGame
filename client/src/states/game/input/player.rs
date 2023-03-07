@@ -9,18 +9,17 @@ use bevy::{
 use bevy_atmosphere::prelude::AtmosphereCamera;
 use bevy_egui::EguiContext;
 use bevy_rapier3d::prelude::{
-    Collider, CollisionGroups, Group, QueryFilter, RapierContext, Rot, SolverGroups, Vect,
+    Collider, CollisionGroups, Group, SolverGroups, Vect,
 };
 use bevy_renet::renet::RenetClient;
 use common::{
     game::world::chunk::{
-        world_to_chunk, world_to_voxel, ChunkComp, CurrentChunks, LoadableTypes, CHUNK_SIZE,
+        world_to_chunk, ChunkComp, CurrentChunks, LoadableTypes,
     },
-    networking::components::{self, ClientChannel},
 };
 use renet_visualizer::RenetClientVisualizer;
 
-use crate::states::game::{networking::components::ControlledPlayer, world::chunk::DirtyChunk};
+use crate::states::game::{networking::components::ControlledPlayer};
 
 #[derive(Component)]
 pub struct FPSCamera {

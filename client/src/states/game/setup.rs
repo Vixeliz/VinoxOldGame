@@ -2,25 +2,21 @@ use std::f32::consts::PI;
 
 use super::collision::plugin::CollisionPlugin;
 use super::networking::plugin::NetworkingPlugin;
-use super::rendering::meshing;
+
 use super::rendering::plugin::RenderingPlugin;
 use super::ui::plugin::UiPlugin;
 use super::world::chunk::ChunkHandling;
 use super::{
     input::plugin::InputPlugin,
-    networking::{
-        components::{ClientLobby, NetworkMapping},
-        *,
-    },
 };
 use belly::prelude::*;
 use bevy::prelude::*;
-use bevy_atmosphere::prelude::*;
-use bevy_egui::EguiPlugin;
-use bevy_rapier3d::prelude::{NoUserData, RapierConfiguration, RapierPhysicsPlugin};
-use common::networking::components::EntityBuffer;
+
+
+
+
 use iyes_loopless::prelude::*;
-use renet_visualizer::{RenetClientVisualizer, RenetVisualizerStyle};
+
 
 use crate::{
     components::{Game, GameState},
