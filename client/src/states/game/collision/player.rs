@@ -1,21 +1,11 @@
+use bevy::prelude::*;
 
-
-use bevy::{
-    prelude::*,
-};
-
-
-use bevy_rapier3d::prelude::{
-    Collider, CollisionGroups, Group, QueryFilter, RapierContext, Rot,
-};
+use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, QueryFilter, RapierContext, Rot};
 use bevy_renet::renet::RenetClient;
 use common::{
-    game::world::chunk::{
-        world_to_voxel, ChunkComp, CurrentChunks, CHUNK_SIZE,
-    },
+    game::world::chunk::{world_to_voxel, ChunkComp, CurrentChunks, CHUNK_SIZE},
     networking::components::{self, ClientChannel},
 };
-
 
 use crate::states::game::{
     input::player::FPSCamera, networking::components::ControlledPlayer, world::chunk::DirtyChunk,
@@ -34,6 +24,7 @@ pub enum CurrentItem {
     Wood,
     Concrete,
     Cobblestone,
+    Glass,
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -57,6 +48,7 @@ pub fn interact(
         CurrentItem::Moss => "vinoxmoss",
         CurrentItem::Wood => "vinoxwood",
         CurrentItem::Greybrick => "vinoxgreybrick",
+        CurrentItem::Glass => "vinoxglass",
     };
 
     for key in keys.get_just_pressed() {
@@ -68,6 +60,7 @@ pub fn interact(
             KeyCode::Key5 => *current_item = CurrentItem::Moss,
             KeyCode::Key6 => *current_item = CurrentItem::Wood,
             KeyCode::Key7 => *current_item = CurrentItem::Greybrick,
+            KeyCode::Key8 => *current_item = CurrentItem::Glass,
             _ => {}
         }
     }

@@ -362,7 +362,11 @@ where
     ao
 }
 
-pub fn generate_mesh<C, T>(chunk: &C, loadable_types: &LoadableTypes) -> QuadGroups
+pub fn generate_mesh<C, T>(
+    chunk: &C,
+    loadable_types: &LoadableTypes,
+    solid_pass: bool,
+) -> QuadGroups
 where
     C: Chunk<Output = T>,
     T: Voxel,
@@ -396,12 +400,22 @@ where
                     for (i, neighbor) in neighbors.into_iter().enumerate() {
                         let other = neighbor.visibility();
 
-                        let generate = match (visibility, other) {
-                            (OPAQUE, EMPTY) | (OPAQUE, TRANSPARENT) | (TRANSPARENT, EMPTY) => true,
+                        let generate = if solid_pass {
+                            match (visibility, other) {
+                                (OPAQUE, EMPTY) | (OPAQUE, TRANSPARENT) => true,
 
-                            (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
+                                (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
 
-                            (_, _) => false,
+                                (_, _) => false,
+                            }
+                        } else {
+                            match (visibility, other) {
+                                (TRANSPARENT, EMPTY) => true,
+
+                                (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
+
+                                (_, _) => false,
+                            }
                         };
 
                         if generate {
@@ -452,7 +466,9 @@ pub fn build_mesh(
 #[derive(Component)]
 pub struct MeshedChunk {
     chunk_mesh: Mesh,
+    transparent_mesh: Mesh,
     collider: Collider,
+    transparent_collider: Collider,
     pos: IVec3,
 }
 
@@ -472,6 +488,46 @@ pub fn process_task(
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
+                commands.entity(chunk_entity).despawn_descendants();
+                let trans_entity = commands
+                    .spawn((
+                        RenderedChunk {
+                            aabb: Aabb {
+                                center: Vec3A::new(
+                                    (CHUNK_SIZE / 2) as f32,
+                                    (CHUNK_SIZE / 2) as f32,
+                                    (CHUNK_SIZE / 2) as f32,
+                                ),
+                                half_extents: Vec3A::new(
+                                    (CHUNK_SIZE / 2) as f32,
+                                    (CHUNK_SIZE / 2) as f32,
+                                    (CHUNK_SIZE / 2) as f32,
+                                ),
+                            },
+                            mesh: PbrBundle {
+                                mesh: meshes.add(chunk.transparent_mesh.clone()),
+                                material: materials.add(StandardMaterial {
+                                    base_color: Color::WHITE,
+                                    base_color_texture: Some(
+                                        texture_atlas
+                                            .get(&loadable_assets.block_atlas)
+                                            .unwrap()
+                                            .texture
+                                            .clone(),
+                                    ),
+                                    perceptual_roughness: 1.0,
+                                    alpha_mode: AlphaMode::Blend,
+                                    ..default()
+                                }),
+                                ..Default::default()
+                            },
+                        },
+                        ChunkCollider {
+                            collider: chunk.transparent_collider.clone(),
+                        },
+                    ))
+                    .id();
+
                 commands.entity(chunk_entity).insert((
                     RenderedChunk {
                         aabb: Aabb {
@@ -498,6 +554,7 @@ pub fn process_task(
                                         .clone(),
                                 ),
                                 perceptual_roughness: 1.0,
+                                alpha_mode: AlphaMode::Opaque,
                                 ..default()
                             }),
                             transform: Transform::from_translation(Vec3::new(
@@ -512,6 +569,8 @@ pub fn process_task(
                         collider: chunk.collider.clone(),
                     },
                 ));
+
+                commands.entity(chunk_entity).push_children(&[trans_entity]);
 
                 commands.entity(entity).despawn_recursive();
             } else {
@@ -548,7 +607,7 @@ pub fn process_queue(
             (
                 chunk_pos,
                 ChunkGenTask(task_pool.spawn(async move {
-                    let mesh_result = generate_mesh(&raw_chunk, &cloned_types);
+                    let mesh_result = generate_mesh(&raw_chunk, &cloned_types, true);
                     let mut positions = Vec::new();
                     let mut indices = Vec::new();
                     let mut normals = Vec::new();
@@ -637,7 +696,99 @@ pub fn process_queue(
                     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
                     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, final_ao);
 
+                    //Transparent Mesh
+                    let mesh_result = generate_mesh(&raw_chunk, &cloned_types, false);
+                    let mut positions = Vec::new();
+                    let mut indices = Vec::new();
+                    let mut normals = Vec::new();
+                    let mut uvs = Vec::new();
+                    let mut ao = Vec::new();
+                    for face in mesh_result.iter() {
+                        let calculated_ao = calculate_ao(
+                            &raw_chunk,
+                            face.side,
+                            face.voxel()[0] as u32,
+                            face.voxel()[1] as u32,
+                            face.voxel()[2] as u32,
+                            &cloned_types,
+                        );
+                        if (calculated_ao[1] + calculated_ao[3])
+                            > (calculated_ao[2] + calculated_ao[0])
+                        {
+                            indices.extend_from_slice(&face.indices(positions.len() as u32, true));
+                        } else {
+                            indices.extend_from_slice(&face.indices(positions.len() as u32, false));
+                        }
+                        positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
+                        normals.extend_from_slice(&face.normals());
+                        ao.extend_from_slice(&calculated_ao);
+
+                        let matched_index = match (face.side.axis, face.side.positive) {
+                            (Axis::X, false) => 2,
+                            (Axis::X, true) => 3,
+                            (Axis::Y, false) => 1,
+                            (Axis::Y, true) => 0,
+                            (Axis::Z, false) => 5,
+                            (Axis::Z, true) => 4,
+                        };
+                        if let Some(texture_index) = clone_atlas.get_texture_index(
+                            &cloned_assets
+                                .block_textures
+                                .get(
+                                    &raw_chunk
+                                        .get_state_for_index(
+                                            raw_chunk.voxels[RawChunk::linearize(UVec3::new(
+                                                face.voxel()[0] as u32,
+                                                face.voxel()[1] as u32,
+                                                face.voxel()[2] as u32,
+                                            ))]
+                                                as usize,
+                                        )
+                                        .unwrap(),
+                                )
+                                .unwrap()[matched_index],
+                        ) {
+                            let face_coords = calculate_coords(
+                                texture_index,
+                                Vec2::new(16.0, 16.0),
+                                clone_atlas.size,
+                            );
+                            uvs.push(face_coords[0]);
+                            uvs.push(face_coords[1]);
+                            uvs.push(face_coords[2]);
+                            uvs.push(face_coords[3]);
+                        } else {
+                            uvs.extend_from_slice(&face.uvs(false, false));
+                        }
+                    }
+                    let col_vertices = positions
+                        .iter()
+                        .cloned()
+                        .map(Vec3::from_array)
+                        .collect::<Vec<_>>();
+
+                    let col_indices = indices
+                        .iter()
+                        .cloned()
+                        .tuples::<(u32, u32, u32)>()
+                        .map(|(x, y, z)| [x, y, z])
+                        .collect::<Vec<_>>();
+                    let final_ao = ao_convert(ao);
+                    let mut transparent_mesh = Mesh::new(PrimitiveTopology::TriangleList);
+                    let transparent_collider = if !indices.is_empty() {
+                        Collider::trimesh(col_vertices, col_indices)
+                    } else {
+                        Collider::cuboid(0.0, 0.0, 0.0)
+                    };
+                    transparent_mesh.set_indices(Some(Indices::U32(indices)));
+                    transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
+                    transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+                    transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+                    transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, final_ao);
+
                     MeshedChunk {
+                        transparent_mesh,
+                        transparent_collider,
                         chunk_mesh: mesh,
                         pos: chunk_pos,
                         collider,

@@ -193,8 +193,6 @@ pub fn update_borders(
         Query<(&ChunkComp, Entity), With<DirtyChunk>>,
         Query<&mut ChunkComp>,
     )>,
-    // dirty_chunks: Query<(&ChunkComp, Entity), With<DirtyChunk>>,
-    // mut all_chunks: Query<&mut ChunkComp>,
     mut mesh_event: EventWriter<MeshChunkEvent>,
     view_distance: Res<ViewDistance>,
 ) {
