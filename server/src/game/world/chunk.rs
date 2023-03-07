@@ -212,7 +212,7 @@ pub fn process_queue(
                 ChunkGenTask(task_pool.spawn(async move {
                     ChunkComp {
                         pos: ChunkPos(chunk_pos),
-                        chunk_data: generate_chunk(chunk_pos, 0),
+                        chunk_data: generate_chunk(chunk_pos, 7),
                         entities: Vec::new(),
                         saved_entities: Vec::new(),
                     }
