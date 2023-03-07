@@ -1,4 +1,4 @@
-use crate::networking::{components::ServerLobby, *};
+use crate::networking::{components::ServerLobby, syncing::NetworkingPlugin, *};
 use bevy::prelude::*;
 use common::{
     game::{
@@ -72,16 +72,12 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ChunkGenerationPlugin)
+            .add_plugin(NetworkingPlugin)
             .insert_resource(LoadableTypes::default())
             .add_startup_system(setup_loadables)
             .add_startup_system(new_renet_server)
             .add_startup_system(setup_builders)
             .add_system(panic_on_error_system)
-            .add_system(syncing::server_update_system)
-            .add_fixed_timestep_system("network_update", 0, syncing::server_network_sync)
-            .add_fixed_timestep_system("network_update", 0, syncing::block_sync)
-            .add_fixed_timestep_system("network_update", 0, syncing::send_chunks)
-            .add_startup_system(setup)
-            .insert_resource(ServerLobby::default());
+            .add_startup_system(setup);
     }
 }

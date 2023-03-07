@@ -1,3 +1,4 @@
+use iyes_loopless::prelude::*;
 use std::{io::Cursor, mem::size_of_val};
 
 use bevy::prelude::*;
@@ -209,5 +210,17 @@ pub fn block_sync(
                 }
             }
         }
+    }
+}
+
+pub struct NetworkingPlugin;
+
+impl Plugin for NetworkingPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_system(server_update_system)
+            .add_fixed_timestep_system("network_update", 0, server_network_sync)
+            .add_fixed_timestep_system("network_update", 0, block_sync)
+            .add_fixed_timestep_system("network_update", 0, send_chunks)
+            .insert_resource(ServerLobby::default());
     }
 }
