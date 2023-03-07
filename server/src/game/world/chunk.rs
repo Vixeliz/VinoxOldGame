@@ -232,8 +232,8 @@ impl Plugin for ChunkGenerationPlugin {
         app.insert_resource(CurrentChunks::default())
             .insert_resource(ChunkQueue::default())
             .insert_resource(ViewDistance {
-                vertical: 4,
                 horizontal: 10,
+                vertical: 4,
             })
             .insert_resource(SimulationDistance {
                 width: 4,

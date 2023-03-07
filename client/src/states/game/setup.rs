@@ -1,12 +1,18 @@
 use std::f32::consts::PI;
 
-use super::input::{self, MouseSensitivity};
-use super::networking::{
-    components::{ClientLobby, NetworkMapping},
-    *,
-};
+use super::collision::plugin::CollisionPlugin;
+use super::networking::plugin::NetworkingPlugin;
 use super::rendering::meshing;
+use super::rendering::plugin::RenderingPlugin;
+use super::ui::plugin::UiPlugin;
 use super::world::chunk::ChunkHandling;
+use super::{
+    input::plugin::InputPlugin,
+    networking::{
+        components::{ClientLobby, NetworkMapping},
+        *,
+    },
+};
 use belly::prelude::*;
 use bevy::prelude::*;
 use bevy_atmosphere::prelude::*;
@@ -52,50 +58,13 @@ pub struct GamePlugin;
 
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        app.add_plugin(UiPlugin)
+            .add_plugin(NetworkingPlugin)
             .add_plugin(ChunkHandling)
-            .add_plugin(AtmospherePlugin)
-            .insert_resource(RapierConfiguration {
-                gravity: Vec3::new(0.0, -25.0, 0.0),
-                ..default()
-            })
-            .insert_resource(NetworkMapping::default())
-            .insert_resource(ClientLobby::default())
-            .insert_resource(EntityBuffer::default())
-            .insert_resource(MouseSensitivity(1.0))
+            .add_plugin(InputPlugin)
             .add_enter_system(GameState::Game, setup)
             .add_exit_system(GameState::Game, despawn_with::<Game>)
-            .add_system_to_stage(
-                CoreStage::PostUpdate,
-                syncing::client_sync_players.run_in_state(GameState::Game),
-            )
-            .add_system_to_stage(
-                CoreStage::Update,
-                syncing::client_disconect.run_in_state(GameState::Game),
-            )
-            .add_fixed_timestep_system(
-                "network_update",
-                0,
-                syncing::client_send_naive_position.run_in_state(GameState::Game),
-            )
-            .add_system(syncing::lerp_new_location.run_in_state(GameState::Game))
-            .add_system(input::collision_movement_system.run_in_state(GameState::Game))
-            .add_system(input::spawn_camera.run_in_state(GameState::Game))
-            .add_system(input::movement_input_system.run_in_state(GameState::Game))
-            .add_system(input::interact.run_in_state(GameState::Game))
-            .add_system(meshing::process_queue.run_in_state(GameState::Game))
-            .add_system(meshing::process_task.run_in_state(GameState::Game))
-            .insert_resource(RenetClientVisualizer::<200>::new(
-                RenetVisualizerStyle::default(),
-            ))
-            .add_plugin(EguiPlugin)
-            .add_system(
-                crate::states::game::input::update_visualizer_system.run_in_state(GameState::Game),
-            )
-            .add_system(
-                crate::states::game::networking::syncing::wait_for_chunks
-                    .run_in_state(GameState::Game),
-            )
-            .add_event::<crate::states::game::rendering::meshing::MeshChunkEvent>();
+            .add_plugin(CollisionPlugin)
+            .add_plugin(RenderingPlugin);
     }
 }
