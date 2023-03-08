@@ -835,6 +835,7 @@ fn ao_convert(ao: Vec<u8>) -> Vec<[f32; 4]> {
     res
 }
 
+// TODO: Switch to using an event based system that will take in what chunk to sort. Sorting will be whenever the player changes blocks in their chunk that chunk will be sorted. When moving between chunks the surrounding chunks are sorted.
 pub fn sort_faces(
     player_chunk: Res<PlayerChunk>,
     current_chunks: Res<CurrentChunks>,
