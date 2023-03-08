@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use common::game::world::chunk::*;
-use noise::{MultiFractal, NoiseFn, OpenSimplex, RidgedMulti};
+use noise::{BasicMulti, MultiFractal, NoiseFn, OpenSimplex, RidgedMulti};
 
 pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
     //TODO: Switch to using ron files to determine biomes and what blocks they should use. For now hardcoding a simplex noise
@@ -24,25 +24,6 @@ pub fn generate_chunk(pos: IVec3, seed: u32) -> RawChunk {
                 } else {
                     raw_chunk.set_block(UVec3::new(x, y, z), "air".to_string());
                 }
-
-                // let multi_noise = ridged_noise.get([
-                //     full_x as f64 / 10.0,
-                //     full_z as f64 / 10.0,
-                //     full_y as f64 / 10.0,
-                // ]);
-
-                // let change = if full_y >= -16 {
-                //     (full_y / 8) as f64
-                // } else {
-                //     1.0
-                // };
-
-                // multi_noise *= change;
-
-                // if multi_noise >= 0.25 {
-                //     raw_chunk
-                //         .set_block(UVec3::new(x as u32, y as u32, z as u32), "air".to_string());
-                // }
             }
         }
     }
