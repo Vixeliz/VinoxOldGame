@@ -1,7 +1,7 @@
 use std::{io::Cursor, time::Duration};
 
 use belly::prelude::*;
-use bevy::prelude::*;
+use bevy::{pbr::wireframe::Wireframe, prelude::*};
 
 use bevy_tweening::{
     lens::{TransformPositionLens, TransformRotationLens},
@@ -30,6 +30,9 @@ use crate::{
 use super::components::{ClientLobby, NetworkMapping, PlayerInfo};
 
 #[derive(Component)]
+pub struct HighLightCube;
+
+#[derive(Component)]
 pub struct JustSpawned {
     timer: Timer,
 }
@@ -47,6 +50,8 @@ pub fn client_sync_players(
     player_builder: Res<PlayerBundleBuilder>,
     mut chunk_event: EventWriter<CreateChunkEvent>,
     mut block_event: EventWriter<SetBlockEvent>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let client_id = client.client_id();
     while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
@@ -61,38 +66,17 @@ pub fn client_sync_players(
                 let mut client_entity = cmd1.spawn_empty();
                 if client_id == id {
                     println!("You connected.");
-                    // let camera_id = cmd2
-                    //     .spawn((
-                    //         Game,
-                    //         Camera3dBundle {
-                    //             camera: Camera {
-                    //                 hdr: true,
-                    //                 ..default()
-                    //             },
-                    //             transform: Transform::from_translation(Vec3::new(0.0, 1.0, 0.0)),
-                    //             ..default()
-                    //         },
-                    //         FPSCamera::default(),
-                    //         BloomSettings::default(),
-                    //         AtmosphereCamera::default(),
-                    //     ))
-                    //     .id();
-                    // client_entity.push_children(&[camera_id]);
+                    cmd2.spawn(PbrBundle {
+                        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.001 })),
+                        material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.125).into()),
+                        transform: Transform::from_xyz(0.0, 0.5, 0.0),
+                        ..default()
+                    })
+                    .insert(HighLightCube);
+
                     client_entity
                         .insert(player_builder.build(translation.into(), id, true))
                         .insert(ControlledPlayer)
-                        // .insert(KinematicCharacterController {
-                        //     // snap_to_ground: Some(
-                        //     //     bevy_rapier3d::prelude::CharacterLength::Relative(0.3),
-                        //     // ),
-                        //     autostep: Some(CharacterAutostep {
-                        //         max_height: CharacterLength::Absolute(1.1),
-                        //         min_width: CharacterLength::Absolute(0.1),
-                        //         include_dynamic_bodies: false,
-                        //     }),
-                        //     offset: CharacterLength::Absolute(0.04),
-                        //     ..default()
-                        // })
                         .insert(JustSpawned {
                             timer: Timer::new(Duration::from_secs(10), TimerMode::Once),
                         });

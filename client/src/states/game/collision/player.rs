@@ -3,12 +3,14 @@ use bevy::prelude::*;
 use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, QueryFilter, RapierContext, Rot};
 use bevy_renet::renet::RenetClient;
 use common::{
-    game::world::chunk::{world_to_voxel, ChunkComp, CurrentChunks, CHUNK_SIZE},
+    game::world::chunk::{voxel_to_world, world_to_voxel, ChunkComp, CurrentChunks, CHUNK_SIZE},
     networking::components::{self, ClientChannel},
 };
 
 use crate::states::game::{
-    input::player::FPSCamera, networking::components::ControlledPlayer, world::chunk::DirtyChunk,
+    input::player::FPSCamera,
+    networking::{components::ControlledPlayer, syncing::HighLightCube},
+    world::chunk::DirtyChunk,
 };
 
 use bevy_rapier3d::prelude::TOIStatus::Converged;
@@ -38,6 +40,10 @@ pub fn interact(
     rapier_context: Res<RapierContext>,
     mut client: ResMut<RenetClient>,
     player_position: Query<&Transform, With<ControlledPlayer>>,
+    mut cube_position: Query<
+        (&mut Transform, &mut Visibility),
+        (With<HighLightCube>, Without<ControlledPlayer>),
+    >,
     mut current_item: Local<CurrentItem>,
 ) {
     let item_string = match current_item.clone() {
@@ -68,109 +74,122 @@ pub fn interact(
     let mouse_left = mouse_button_input.just_pressed(MouseButton::Left);
     let mouse_right = mouse_button_input.just_pressed(MouseButton::Right);
     if let Ok(player_transform) = player_position.get_single() {
-        if mouse_left || mouse_right {
-            if let Ok(camera_transform) = camera_query.get_single() {
-                // Then cast the ray.
-                let hit = rapier_context.cast_ray_and_get_normal(
-                    camera_transform.translation(),
-                    camera_transform.forward(),
-                    100.0,
-                    true,
-                    QueryFilter::only_fixed(),
-                );
-                if let Some((_, toi)) = hit {
-                    let point = if mouse_right {
-                        toi.point + (toi.normal / Vec3::splat(2.0))
-                    } else {
-                        toi.point - (toi.normal / Vec3::splat(2.0))
-                    };
-                    let pos = world_to_voxel(point);
-                    if let Some(chunk_entity) = current_chunks.get_entity(pos.0) {
-                        if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
-                            if mouse_right {
-                                if (point.x <= player_transform.translation.x - 0.5
-                                    || point.x >= player_transform.translation.x + 0.5)
-                                    || (point.z <= player_transform.translation.z - 0.5
-                                        || point.z >= player_transform.translation.z + 0.5)
-                                    || (point.y <= player_transform.translation.y - 2.0
-                                        || point.y >= player_transform.translation.y + 1.0)
-                                {
-                                    chunk.chunk_data.add_block_state(&item_string.to_string());
-                                    chunk.chunk_data.set_block(pos.1, item_string.to_string());
-                                    let send_block = components::Commands::SentBlock {
-                                        chunk_pos: pos.0.into(),
-                                        voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
-                                        block_type: item_string.to_string(),
-                                    };
-                                    let input_message = bincode::serialize(&send_block).unwrap();
-
-                                    client.send_message(ClientChannel::Commands, input_message);
-                                }
-                            } else {
-                                chunk.chunk_data.set_block(pos.1, "air".to_string());
+        if let Ok(camera_transform) = camera_query.get_single() {
+            // Then cast the ray.
+            let hit = rapier_context.cast_ray_and_get_normal(
+                camera_transform.translation(),
+                camera_transform.forward(),
+                100.0,
+                true,
+                QueryFilter::only_fixed(),
+            );
+            if let Some((_, toi)) = hit {
+                let point = if mouse_right {
+                    toi.point + (toi.normal / Vec3::splat(2.0))
+                } else {
+                    toi.point - (toi.normal / Vec3::splat(2.0))
+                };
+                let pos = world_to_voxel(point);
+                if let Some(chunk_entity) = current_chunks.get_entity(pos.0) {
+                    if let Ok((mut block_transform, mut block_visibility)) =
+                        cube_position.get_single_mut()
+                    {
+                        if !block_visibility.is_visible {
+                            block_visibility.toggle();
+                        }
+                        block_transform.translation =
+                            voxel_to_world(pos.1, pos.0) - Vec3::splat(0.5);
+                    }
+                    if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
+                        if mouse_right {
+                            if (point.x <= player_transform.translation.x - 0.5
+                                || point.x >= player_transform.translation.x + 0.5)
+                                || (point.z <= player_transform.translation.z - 0.5
+                                    || point.z >= player_transform.translation.z + 0.5)
+                                || (point.y <= player_transform.translation.y - 2.0
+                                    || point.y >= player_transform.translation.y + 1.0)
+                            {
+                                chunk.chunk_data.add_block_state(&item_string.to_string());
+                                chunk.chunk_data.set_block(pos.1, item_string.to_string());
                                 let send_block = components::Commands::SentBlock {
                                     chunk_pos: pos.0.into(),
                                     voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
-                                    block_type: "air".to_string(),
+                                    block_type: item_string.to_string(),
                                 };
                                 let input_message = bincode::serialize(&send_block).unwrap();
 
                                 client.send_message(ClientChannel::Commands, input_message);
                             }
-                            match pos.1.x {
-                                1 => {
-                                    if let Some(neighbor_chunk) =
-                                        current_chunks.get_entity(pos.0 + IVec3::new(-1, 0, 0))
-                                    {
-                                        commands.entity(neighbor_chunk).insert(DirtyChunk);
-                                    }
-                                }
-                                CHUNK_SIZE => {
-                                    if let Some(neighbor_chunk) =
-                                        current_chunks.get_entity(pos.0 + IVec3::new(1, 0, 0))
-                                    {
-                                        commands.entity(neighbor_chunk).insert(DirtyChunk);
-                                    }
-                                }
-                                _ => {}
-                            }
-                            match pos.1.y {
-                                1 => {
-                                    if let Some(neighbor_chunk) =
-                                        current_chunks.get_entity(pos.0 + IVec3::new(0, -1, 0))
-                                    {
-                                        commands.entity(neighbor_chunk).insert(DirtyChunk);
-                                    }
-                                }
-                                CHUNK_SIZE => {
-                                    if let Some(neighbor_chunk) =
-                                        current_chunks.get_entity(pos.0 + IVec3::new(0, 1, 0))
-                                    {
-                                        commands.entity(neighbor_chunk).insert(DirtyChunk);
-                                    }
-                                }
-                                _ => {}
-                            }
-                            match pos.1.z {
-                                1 => {
-                                    if let Some(neighbor_chunk) =
-                                        current_chunks.get_entity(pos.0 + IVec3::new(0, 0, -1))
-                                    {
-                                        commands.entity(neighbor_chunk).insert(DirtyChunk);
-                                    }
-                                }
-                                CHUNK_SIZE => {
-                                    if let Some(neighbor_chunk) =
-                                        current_chunks.get_entity(pos.0 + IVec3::new(0, 0, 1))
-                                    {
-                                        commands.entity(neighbor_chunk).insert(DirtyChunk);
-                                    }
-                                }
-                                _ => {}
-                            }
+                        } else if mouse_left {
+                            chunk.chunk_data.set_block(pos.1, "air".to_string());
+                            let send_block = components::Commands::SentBlock {
+                                chunk_pos: pos.0.into(),
+                                voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
+                                block_type: "air".to_string(),
+                            };
+                            let input_message = bincode::serialize(&send_block).unwrap();
 
-                            commands.entity(chunk_entity).insert(DirtyChunk);
+                            client.send_message(ClientChannel::Commands, input_message);
                         }
+                        match pos.1.x {
+                            1 => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(-1, 0, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            CHUNK_SIZE => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(1, 0, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            _ => {}
+                        }
+                        match pos.1.y {
+                            1 => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, -1, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            CHUNK_SIZE => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, 1, 0))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            _ => {}
+                        }
+                        match pos.1.z {
+                            1 => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, 0, -1))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            CHUNK_SIZE => {
+                                if let Some(neighbor_chunk) =
+                                    current_chunks.get_entity(pos.0 + IVec3::new(0, 0, 1))
+                                {
+                                    commands.entity(neighbor_chunk).insert(DirtyChunk);
+                                }
+                            }
+                            _ => {}
+                        }
+
+                        commands.entity(chunk_entity).insert(DirtyChunk);
+                    }
+                }
+            } else {
+                if let Ok((_, mut block_visibility)) = cube_position.get_single_mut() {
+                    if block_visibility.is_visible {
+                        block_visibility.toggle();
                     }
                 }
             }

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use bevy::{
     math::Vec3A,
     prelude::*,
@@ -5,6 +7,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_rapier3d::prelude::Collider;
+use bevy_tweening::{lens::TransformPositionLens, *};
 use common::game::world::chunk::{
     voxel_to_world, Chunk, ChunkComp, CurrentChunks, LoadableTypes, RawChunk, ViewDistance, Voxel,
     VoxelVisibility, CHUNK_SIZE,
@@ -475,6 +478,7 @@ pub struct MeshedChunk {
 #[derive(Component)]
 pub struct ChunkGenTask(Task<MeshedChunk>);
 
+#[allow(clippy::too_many_arguments)]
 pub fn process_task(
     mut commands: Commands,
     mut chunk_query: Query<(Entity, &mut ChunkGenTask)>,
@@ -483,12 +487,47 @@ pub fn process_task(
     texture_atlas: Res<Assets<TextureAtlas>>,
     loadable_assets: ResMut<LoadableAssets>,
     current_chunks: ResMut<CurrentChunks>,
+    chunks: Query<&Handle<Mesh>>,
 ) {
     let _block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
                 commands.entity(chunk_entity).despawn_descendants();
+                let tween = Tween::new(
+                    EaseFunction::QuadraticInOut,
+                    Duration::from_secs(1),
+                    TransformPositionLens {
+                        start: Vec3::new(
+                            (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
+                            ((chunk.pos[1] * (CHUNK_SIZE) as i32) as f32) - CHUNK_SIZE as f32,
+                            (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
+                        ),
+
+                        end: Vec3::new(
+                            (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
+                            (chunk.pos[1] * (CHUNK_SIZE) as i32) as f32,
+                            (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
+                        ),
+                    },
+                )
+                .with_repeat_count(RepeatCount::Finite(1));
+
+                let chunk_pos = if chunks.get(chunk_entity).is_err() {
+                    commands.entity(chunk_entity).insert(Animator::new(tween));
+                    Vec3::new(
+                        (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
+                        ((chunk.pos[1] * (CHUNK_SIZE) as i32) as f32) - CHUNK_SIZE as f32,
+                        (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
+                    )
+                } else {
+                    Vec3::new(
+                        (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
+                        (chunk.pos[1] * (CHUNK_SIZE) as i32) as f32,
+                        (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
+                    )
+                };
+
                 let trans_entity = commands
                     .spawn((
                         RenderedChunk {
@@ -506,6 +545,7 @@ pub fn process_task(
                             },
                             mesh: PbrBundle {
                                 mesh: meshes.add(chunk.transparent_mesh.clone()),
+                                // Create material once this is dumb lol
                                 material: materials.add(StandardMaterial {
                                     base_color: Color::WHITE,
                                     base_color_texture: Some(
@@ -557,11 +597,7 @@ pub fn process_task(
                                 alpha_mode: AlphaMode::Opaque,
                                 ..default()
                             }),
-                            transform: Transform::from_translation(Vec3::new(
-                                (chunk.pos[0] * (CHUNK_SIZE) as i32) as f32,
-                                (chunk.pos[1] * (CHUNK_SIZE) as i32) as f32,
-                                (chunk.pos[2] * (CHUNK_SIZE) as i32) as f32,
-                            )),
+                            transform: Transform::from_translation(chunk_pos),
                             ..Default::default()
                         },
                     },
@@ -571,7 +607,6 @@ pub fn process_task(
                 ));
 
                 commands.entity(chunk_entity).push_children(&[trans_entity]);
-
                 commands.entity(entity).despawn_recursive();
             } else {
                 commands.entity(entity).despawn_recursive();
