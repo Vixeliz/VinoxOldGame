@@ -1,7 +1,7 @@
 use std::{io::Cursor, time::Duration};
 
 use belly::prelude::*;
-use bevy::{pbr::wireframe::Wireframe, prelude::*};
+use bevy::prelude::*;
 
 use bevy_tweening::{
     lens::{TransformPositionLens, TransformRotationLens},
@@ -52,6 +52,7 @@ pub fn client_sync_players(
     mut block_event: EventWriter<SetBlockEvent>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
+    asset_server: Res<AssetServer>,
 ) {
     let client_id = client.client_id();
     while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
@@ -68,7 +69,13 @@ pub fn client_sync_players(
                     println!("You connected.");
                     cmd2.spawn(PbrBundle {
                         mesh: meshes.add(Mesh::from(shape::Cube { size: 1.001 })),
-                        material: materials.add(Color::rgba(1.0, 1.0, 1.0, 0.125).into()),
+                        material: materials.add(StandardMaterial {
+                            base_color: Color::rgba(1.1, 1.1, 1.1, 1.0),
+                            base_color_texture: Some(asset_server.load("outline.png")),
+                            alpha_mode: AlphaMode::Blend,
+                            unlit: true,
+                            ..Default::default()
+                        }),
                         transform: Transform::from_xyz(0.0, 0.5, 0.0),
                         ..default()
                     })
