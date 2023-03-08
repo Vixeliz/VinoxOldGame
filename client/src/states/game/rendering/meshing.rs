@@ -6,8 +6,8 @@ use bevy::{
 };
 use bevy_rapier3d::prelude::Collider;
 use common::game::world::chunk::{
-    Chunk, ChunkComp, CurrentChunks, LoadableTypes, RawChunk, ViewDistance, Voxel, VoxelVisibility,
-    CHUNK_SIZE,
+    voxel_to_world, Chunk, ChunkComp, CurrentChunks, LoadableTypes, RawChunk, ViewDistance, Voxel,
+    VoxelVisibility, CHUNK_SIZE,
 };
 use futures_lite::future;
 use itertools::Itertools;
@@ -833,4 +833,82 @@ fn ao_convert(ao: Vec<u8>) -> Vec<[f32; 4]> {
         }
     }
     res
+}
+
+pub fn sort_faces(
+    player_chunk: Res<PlayerChunk>,
+    current_chunks: Res<CurrentChunks>,
+    handles: Query<&Handle<Mesh>>,
+    chunks: Query<&Children, With<ChunkComp>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    camera_transform: Query<&GlobalTransform, With<Camera>>,
+) {
+    if let Ok(camera_transform) = camera_transform.get_single() {
+        if let Some(chunk_entity) = current_chunks.get_entity(player_chunk.chunk_pos) {
+            if let Ok(children) = chunks.get(chunk_entity) {
+                if let Some(child_entity) = children.get(0) {
+                    if let Ok(chunk_mesh_handle) = handles.get(*child_entity) {
+                        if let Some(chunk_mesh) = meshes.get_mut(chunk_mesh_handle) {
+                            let mut collected_indices = Vec::new();
+                            let mut sorted_indices: Vec<([usize; 6], f32)> = Vec::new();
+                            if let Some(vertex_array) =
+                                chunk_mesh.attribute(Mesh::ATTRIBUTE_POSITION)
+                            {
+                                if let Some(raw_array) = vertex_array.as_float3() {
+                                    if let Some(indices) = chunk_mesh.indices() {
+                                        for indice in indices.iter().chunks(6).into_iter() {
+                                            let vec_ind: Vec<usize> = indice.collect();
+                                            let x = (raw_array[vec_ind[1]][0]
+                                                + raw_array[vec_ind[3]][0]
+                                                + raw_array[vec_ind[4]][0]
+                                                + raw_array[vec_ind[5]][0])
+                                                / 4.0;
+                                            let y = (raw_array[vec_ind[1]][1]
+                                                + raw_array[vec_ind[3]][1]
+                                                + raw_array[vec_ind[4]][1]
+                                                + raw_array[vec_ind[5]][1])
+                                                / 4.0;
+                                            let z = (raw_array[vec_ind[1]][2]
+                                                + raw_array[vec_ind[3]][2]
+                                                + raw_array[vec_ind[4]][2]
+                                                + raw_array[vec_ind[5]][2])
+                                                / 4.0;
+                                            let real_pos = voxel_to_world(
+                                                UVec3::new(x as u32, y as u32, z as u32),
+                                                player_chunk.chunk_pos,
+                                            );
+                                            let dist =
+                                                camera_transform.translation().distance(real_pos);
+                                            sorted_indices.push((
+                                                [
+                                                    vec_ind[0], vec_ind[1], vec_ind[2], vec_ind[3],
+                                                    vec_ind[4], vec_ind[5],
+                                                ],
+                                                dist,
+                                            ));
+                                        }
+                                        sorted_indices
+                                            .sort_by(|a, b| a.1.partial_cmp(&b.1).unwrap());
+                                        sorted_indices.reverse();
+
+                                        // This is horrible most definitely a better way to do this
+                                        for indice in sorted_indices.iter() {
+                                            collected_indices.push(indice.0[0] as u32);
+                                            collected_indices.push(indice.0[1] as u32);
+                                            collected_indices.push(indice.0[2] as u32);
+                                            collected_indices.push(indice.0[3] as u32);
+                                            collected_indices.push(indice.0[4] as u32);
+                                            collected_indices.push(indice.0[5] as u32);
+                                        }
+                                    }
+                                }
+                            }
+
+                            chunk_mesh.set_indices(Some(Indices::U32(collected_indices)));
+                        }
+                    }
+                }
+            }
+        }
+    }
 }

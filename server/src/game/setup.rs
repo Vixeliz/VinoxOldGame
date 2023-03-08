@@ -1,4 +1,4 @@
-use crate::networking::{components::ServerLobby, syncing::NetworkingPlugin, *};
+use crate::networking::syncing::NetworkingPlugin;
 use bevy::prelude::*;
 use common::{
     game::{
@@ -8,7 +8,6 @@ use common::{
     },
     networking::components::{server_connection_config, NetworkIP, PROTOCOL_ID},
 };
-use iyes_loopless::prelude::AppLooplessFixedTimestepExt;
 
 pub fn setup(mut commands: Commands, _chunk_manager: ChunkManager) {
     commands.spawn(LoadPoint(IVec3::new(0, 0, 0)));
