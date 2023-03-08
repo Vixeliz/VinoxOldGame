@@ -380,60 +380,58 @@ where
 
     let mut buffer = QuadGroups::default();
 
-    for i in 0..C::size() {
-        let (x, y, z) = C::delinearize(i);
+    for z in 1..C::Z - 1 {
+        for y in 1..C::Y - 1 {
+            for x in 1..C::X - 1 {
+                let (x, y, z) = (x as u32, y as u32, z as u32);
+                let voxel = chunk.get(x, y, z, loadable_types);
 
-        if (x > 0 && x < (C::X - 1) as u32)
-            && (y > 0 && y < (C::Y - 1) as u32)
-            && (z > 0 && z < (C::Z - 1) as u32)
-        {
-            let voxel = chunk.get(x, y, z, loadable_types);
-            match voxel.visibility() {
-                EMPTY => continue,
-                visibility => {
-                    let neighbors = [
-                        chunk.get(x - 1, y, z, loadable_types),
-                        chunk.get(x + 1, y, z, loadable_types),
-                        chunk.get(x, y - 1, z, loadable_types),
-                        chunk.get(x, y + 1, z, loadable_types),
-                        chunk.get(x, y, z - 1, loadable_types),
-                        chunk.get(x, y, z + 1, loadable_types),
-                    ];
+                match voxel.visibility() {
+                    EMPTY => continue,
+                    visibility => {
+                        let neighbors = [
+                            chunk.get(x - 1, y, z, loadable_types),
+                            chunk.get(x + 1, y, z, loadable_types),
+                            chunk.get(x, y - 1, z, loadable_types),
+                            chunk.get(x, y + 1, z, loadable_types),
+                            chunk.get(x, y, z - 1, loadable_types),
+                            chunk.get(x, y, z + 1, loadable_types),
+                        ];
 
-                    for (i, neighbor) in neighbors.into_iter().enumerate() {
-                        let other = neighbor.visibility();
+                        for (i, neighbor) in neighbors.into_iter().enumerate() {
+                            let other = neighbor.visibility();
 
-                        let generate = if solid_pass {
-                            match (visibility, other) {
-                                (OPAQUE, EMPTY) | (OPAQUE, TRANSPARENT) => true,
+                            let generate = if solid_pass {
+                                match (visibility, other) {
+                                    (OPAQUE, EMPTY) | (OPAQUE, TRANSPARENT) => true,
 
-                                (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
+                                    (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
 
-                                (_, _) => false,
+                                    (_, _) => false,
+                                }
+                            } else {
+                                match (visibility, other) {
+                                    (TRANSPARENT, EMPTY) => true,
+
+                                    (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
+
+                                    (_, _) => false,
+                                }
+                            };
+
+                            if generate {
+                                buffer.groups[i].push(Quad {
+                                    voxel: [x as usize, y as usize, z as usize],
+                                    width: 1,
+                                    height: 1,
+                                });
                             }
-                        } else {
-                            match (visibility, other) {
-                                (TRANSPARENT, EMPTY) => true,
-
-                                (TRANSPARENT, TRANSPARENT) => voxel != neighbor,
-
-                                (_, _) => false,
-                            }
-                        };
-
-                        if generate {
-                            buffer.groups[i].push(Quad {
-                                voxel: [x as usize, y as usize, z as usize],
-                                width: 1,
-                                height: 1,
-                            });
                         }
                     }
                 }
             }
         }
     }
-
     buffer
 }
 
