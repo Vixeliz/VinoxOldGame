@@ -30,6 +30,7 @@ pub enum CurrentItem {
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub fn interact(
     mut commands: Commands,
     mut chunks: Query<&mut ChunkComp>,
@@ -186,11 +187,9 @@ pub fn interact(
                         commands.entity(chunk_entity).insert(DirtyChunk);
                     }
                 }
-            } else {
-                if let Ok((_, mut block_visibility)) = cube_position.get_single_mut() {
-                    if block_visibility.is_visible {
-                        block_visibility.toggle();
-                    }
+            } else if let Ok((_, mut block_visibility)) = cube_position.get_single_mut() {
+                if block_visibility.is_visible {
+                    block_visibility.toggle();
                 }
             }
         }

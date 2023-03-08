@@ -14,6 +14,10 @@ use common::game::world::chunk::{
     ChunkComp, ChunkPos, CurrentChunks, RemoveChunk, SimulationDistance, ViewDistance,
 };
 use futures_lite::future;
+use rand::Rng;
+
+#[derive(Resource, Default)]
+pub struct WorldSeed(pub u32);
 
 #[derive(Component, Default, Clone)]
 pub struct LoadPoint(pub IVec3);
@@ -201,7 +205,9 @@ pub fn process_queue(
     mut commands: Commands,
     mut chunk_queue: ResMut<ChunkQueue>,
     mut current_chunks: ResMut<CurrentChunks>,
+    seed: Res<WorldSeed>,
 ) {
+    let cloned_seed = seed.0;
     let task_pool = AsyncComputeTaskPool::get();
     chunk_queue
         .create
@@ -212,7 +218,7 @@ pub fn process_queue(
                 ChunkGenTask(task_pool.spawn(async move {
                     ChunkComp {
                         pos: ChunkPos(chunk_pos),
-                        chunk_data: generate_chunk(chunk_pos, 7),
+                        chunk_data: generate_chunk(chunk_pos, cloned_seed),
                         entities: Vec::new(),
                         saved_entities: Vec::new(),
                     }
@@ -240,6 +246,7 @@ impl Plugin for ChunkGenerationPlugin {
                 height: 4,
                 depth: 4,
             })
+            .insert_resource(WorldSeed(rand::thread_rng().gen_range(0..u32::MAX)))
             .add_system(clear_unloaded_chunks.with_run_criteria(should_update_chunks))
             .add_system(unsend_chunks.with_run_criteria(should_update_chunks))
             .add_system(generate_chunks_world.with_run_criteria(should_update_chunks))
