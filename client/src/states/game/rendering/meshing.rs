@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{collections::HashSet, time::Duration};
 
 use bevy::{
     math::Vec3A,
@@ -446,20 +446,24 @@ pub fn build_mesh(
     // let block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     // 0 and CHUNK_SIZE_PADDED dont get built into the mesh itself its data for meshing from other chunks this is just one solution
     // TODO: Redo a lot of this code but for now just want a working implementation. The ao and custom geometry are the things I think need the most looking at
+    let mut checked = HashSet::new();
     for evt in event.iter() {
-        if player_chunk.is_in_radius(
-            evt.pos,
-            IVec2::new(-view_distance.horizontal, -view_distance.vertical),
-            IVec2::new(view_distance.horizontal, view_distance.vertical),
-        ) {
-            chunk_queue.mesh.push((
+        if !checked.contains(&evt.pos) {
+            checked.insert(evt.pos);
+            if player_chunk.is_in_radius(
                 evt.pos,
-                chunks
-                    .get(current_chunks.get_entity(evt.pos).unwrap())
-                    .unwrap()
-                    .chunk_data
-                    .clone(),
-            ));
+                IVec2::new(-view_distance.horizontal, -view_distance.vertical),
+                IVec2::new(view_distance.horizontal, view_distance.vertical),
+            ) {
+                chunk_queue.mesh.push((
+                    evt.pos,
+                    chunks
+                        .get(current_chunks.get_entity(evt.pos).unwrap())
+                        .unwrap()
+                        .chunk_data
+                        .clone(),
+                ));
+            }
         }
     }
 }
@@ -526,6 +530,7 @@ pub fn process_task(
                     )
                 };
 
+                //TODO: Spawn chunk collider at actual chunk position then have the mesh be a child instead?
                 let trans_entity = commands
                     .spawn((
                         RenderedChunk {

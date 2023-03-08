@@ -1,5 +1,7 @@
-use bevy::{ecs::schedule::ShouldRun, prelude::*, render::primitives::Aabb};
+use bevy::{ecs::schedule::ShouldRun, prelude::*, render::primitives::Aabb, utils::FloatOrd};
 use bevy_rapier3d::prelude::Collider;
+
+use rand::prelude::*;
 
 use common::game::world::chunk::{
     world_to_chunk, Chunk, ChunkComp, ChunkPos, CurrentChunks, LoadableTypes, RawChunk,
@@ -205,11 +207,25 @@ pub fn update_borders(
     )>,
     mut mesh_event: EventWriter<MeshChunkEvent>,
     view_distance: Res<ViewDistance>,
+    player_chunk: Res<PlayerChunk>,
 ) {
     let mut dirty_chunk_positions = Vec::new();
+    let mut sorted_chunk_positions = Vec::new();
     for dirty_chunk in chunk_set.p0().iter() {
-        dirty_chunk_positions.push(dirty_chunk.0.pos.0);
+        sorted_chunk_positions.push(dirty_chunk.0.pos.0);
     }
+
+    sorted_chunk_positions.sort_unstable_by_key(|key| {
+        FloatOrd(key.as_vec3().distance(player_chunk.chunk_pos.as_vec3()))
+    });
+
+    for dirty_chunk in sorted_chunk_positions.iter() {
+        if dirty_chunk_positions.len() > 32 {
+            break;
+        }
+        dirty_chunk_positions.push(*dirty_chunk);
+    }
+
     for dirty_chunk_pos in dirty_chunk_positions.iter() {
         if current_chunks.get_entity(*dirty_chunk_pos).is_some() {
             if current_chunks.all_neighbors_exist(
@@ -247,50 +263,63 @@ pub fn update_borders(
                     }
                     // TODO: Try to figure out a better way to do this
                     let mut chunk_data_cloned = chunk_data.map(|x| x.chunk_data.clone());
-                    for index in 0..chunk_data_cloned[0].voxels.0.len() {
-                        let (x, y, z) = RawChunk::delinearize(index);
-                        match (x, y, z) {
-                            (1..=CHUNK_SIZE, CHUNK_BOUND, 1..=CHUNK_SIZE) => {
-                                let block_string =
-                                    chunk_data_cloned[2].get_block(UVec3::new(x, 1, z)).unwrap();
-                                chunk_data_cloned[0].add_block_state(&block_string);
-                                chunk_data_cloned[0].set_block(UVec3::new(x, y, z), block_string);
+                    for z in 1..RawChunk::Z - 1 {
+                        for y in 1..RawChunk::Y - 1 {
+                            for x in 1..RawChunk::X - 1 {
+                                let (x, y, z) = (x as u32, y as u32, z as u32);
+                                match (x, y, z) {
+                                    (1..=CHUNK_SIZE, CHUNK_BOUND, 1..=CHUNK_SIZE) => {
+                                        let block_string = chunk_data_cloned[2]
+                                            .get_block(UVec3::new(x, 1, z))
+                                            .unwrap();
+                                        chunk_data_cloned[0].add_block_state(&block_string);
+                                        chunk_data_cloned[0]
+                                            .set_block(UVec3::new(x, y, z), block_string);
+                                    }
+                                    (1..=CHUNK_SIZE, 0, 1..=CHUNK_SIZE) => {
+                                        let block_string = chunk_data_cloned[1]
+                                            .get_block(UVec3::new(x, CHUNK_SIZE, z))
+                                            .unwrap();
+                                        chunk_data_cloned[0].add_block_state(&block_string);
+                                        chunk_data_cloned[0]
+                                            .set_block(UVec3::new(x, y, z), block_string);
+                                    }
+                                    (0, 1..=CHUNK_SIZE, 1..=CHUNK_SIZE) => {
+                                        let block_string = chunk_data_cloned[3]
+                                            .get_block(UVec3::new(CHUNK_SIZE, y, z))
+                                            .unwrap();
+                                        chunk_data_cloned[0].add_block_state(&block_string);
+                                        chunk_data_cloned[0]
+                                            .set_block(UVec3::new(x, y, z), block_string);
+                                    }
+                                    (CHUNK_BOUND, 1..=CHUNK_SIZE, 1..=CHUNK_SIZE) => {
+                                        let block_string = chunk_data_cloned[4]
+                                            .get_block(UVec3::new(1, y, z))
+                                            .unwrap();
+                                        chunk_data_cloned[0].add_block_state(&block_string);
+                                        chunk_data_cloned[0]
+                                            .set_block(UVec3::new(x, y, z), block_string);
+                                    }
+                                    (1..=CHUNK_SIZE, 1..=CHUNK_SIZE, 0) => {
+                                        let block_string = chunk_data_cloned[5]
+                                            .get_block(UVec3::new(x, y, CHUNK_SIZE))
+                                            .unwrap();
+                                        chunk_data_cloned[0].add_block_state(&block_string);
+                                        chunk_data_cloned[0]
+                                            .set_block(UVec3::new(x, y, z), block_string);
+                                    }
+                                    (1..=CHUNK_SIZE, 1..=CHUNK_SIZE, CHUNK_BOUND) => {
+                                        let block_string = chunk_data_cloned[6]
+                                            .get_block(UVec3::new(x, y, 1))
+                                            .unwrap();
+                                        chunk_data_cloned[0].add_block_state(&block_string);
+                                        chunk_data_cloned[0]
+                                            .set_block(UVec3::new(x, y, z), block_string);
+                                    }
+                                    (_, _, _) => {}
+                                };
                             }
-                            (1..=CHUNK_SIZE, 0, 1..=CHUNK_SIZE) => {
-                                let block_string = chunk_data_cloned[1]
-                                    .get_block(UVec3::new(x, CHUNK_SIZE, z))
-                                    .unwrap();
-                                chunk_data_cloned[0].add_block_state(&block_string);
-                                chunk_data_cloned[0].set_block(UVec3::new(x, y, z), block_string);
-                            }
-                            (0, 1..=CHUNK_SIZE, 1..=CHUNK_SIZE) => {
-                                let block_string = chunk_data_cloned[3]
-                                    .get_block(UVec3::new(CHUNK_SIZE, y, z))
-                                    .unwrap();
-                                chunk_data_cloned[0].add_block_state(&block_string);
-                                chunk_data_cloned[0].set_block(UVec3::new(x, y, z), block_string);
-                            }
-                            (CHUNK_BOUND, 1..=CHUNK_SIZE, 1..=CHUNK_SIZE) => {
-                                let block_string =
-                                    chunk_data_cloned[4].get_block(UVec3::new(1, y, z)).unwrap();
-                                chunk_data_cloned[0].add_block_state(&block_string);
-                                chunk_data_cloned[0].set_block(UVec3::new(x, y, z), block_string);
-                            }
-                            (1..=CHUNK_SIZE, 1..=CHUNK_SIZE, 0) => {
-                                let block_string = chunk_data_cloned[5]
-                                    .get_block(UVec3::new(x, y, CHUNK_SIZE))
-                                    .unwrap();
-                                chunk_data_cloned[0].add_block_state(&block_string);
-                                chunk_data_cloned[0].set_block(UVec3::new(x, y, z), block_string);
-                            }
-                            (1..=CHUNK_SIZE, 1..=CHUNK_SIZE, CHUNK_BOUND) => {
-                                let block_string =
-                                    chunk_data_cloned[6].get_block(UVec3::new(x, y, 1)).unwrap();
-                                chunk_data_cloned[0].add_block_state(&block_string);
-                                chunk_data_cloned[0].set_block(UVec3::new(x, y, z), block_string);
-                            }
-                            (_, _, _) => {}
-                        };
+                        }
                     }
                     new_chunks.push(chunk_data_cloned[0].clone());
                 }

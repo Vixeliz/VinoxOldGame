@@ -1293,6 +1293,7 @@ dependencies = [
  "itertools",
  "iyes_loopless",
  "mlua",
+ "rand 0.8.5",
  "renet_visualizer",
  "ron",
  "serde",

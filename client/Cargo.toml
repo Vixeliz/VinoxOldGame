@@ -44,4 +44,5 @@ bevy_atmosphere = "0.5.0"
 itertools = "0.10.5"
 renet_visualizer = { version="0.0.3", features=["bevy"] }
 bevy_tweening = "0.6.0"
+rand = "0.8.5"
 # bevy-vfx-bag = {git="https://github.com/torsteingrindvik/bevy-vfx-bag.git"}
