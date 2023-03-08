@@ -3,8 +3,7 @@
 ## HEAVILY IN DEVELOPMENT STILL NOTHING HERE IS FINAL AND THE CODE NEEDS REFACTORING
 
 Sandbox survival game made with Rust and bevy.
-The goal of this project is somewhat like minetest(very loosely heavily focused on only being for sandbox survival games and revolves around the base game) but a much more limited scripting system at first with the upside of a more comprehensive base game and
-more modern engine technology.
+The goal of this project is peaceful sandbox experience focused around exploration, discovery, automation, and building. With some lore that doesn't get in your way
 
 Reasons for the license choices:
 For artwork the base game is heavily inspired off of a universe I have tons of lore built up for from years and honestly don't really want anyone else
