@@ -1,3 +1,4 @@
+Cargo.lock
 /target
 run.sh
 run-release.sh
