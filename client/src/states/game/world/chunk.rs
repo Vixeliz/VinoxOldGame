@@ -255,7 +255,7 @@ pub fn update_borders(
                         .get_entity(*dirty_chunk_pos + IVec3::new(0, 0, 1))
                         .unwrap(),
                 ];
-                let mut new_chunks = Vec::new();
+                let mut new_chunk: RawChunk = RawChunk::default();
                 if let Ok(chunk_data) = chunk_set.p1().get_many_mut(neighbor_entities) {
                     if chunk_data[0].chunk_data.palette == vec!["air".to_string()] {
                         commands.entity(dirty_entity).remove::<DirtyChunk>();
@@ -263,9 +263,9 @@ pub fn update_borders(
                     }
                     // TODO: Try to figure out a better way to do this
                     let mut chunk_data_cloned = chunk_data.map(|x| x.chunk_data.clone());
-                    for z in 1..RawChunk::Z - 1 {
-                        for y in 1..RawChunk::Y - 1 {
-                            for x in 1..RawChunk::X - 1 {
+                    for z in 0..=CHUNK_BOUND {
+                        for y in 0..=CHUNK_BOUND {
+                            for x in 0..=CHUNK_BOUND {
                                 let (x, y, z) = (x as u32, y as u32, z as u32);
                                 match (x, y, z) {
                                     (1..=CHUNK_SIZE, CHUNK_BOUND, 1..=CHUNK_SIZE) => {
@@ -321,17 +321,15 @@ pub fn update_borders(
                             }
                         }
                     }
-                    new_chunks.push(chunk_data_cloned[0].clone());
+                    new_chunk = chunk_data_cloned[0].clone();
                 }
                 let mut chunk_set = chunk_set.p1();
                 let mut chunk_data = chunk_set.get_mut(neighbor_entities[0]).unwrap();
-                for chunk in new_chunks.iter() {
-                    chunk_data.chunk_data = chunk.to_owned();
-                    mesh_event.send(MeshChunkEvent {
-                        pos: *dirty_chunk_pos,
-                    });
-                    commands.entity(dirty_entity).remove::<DirtyChunk>();
-                }
+                chunk_data.chunk_data = new_chunk.to_owned();
+                mesh_event.send(MeshChunkEvent {
+                    pos: *dirty_chunk_pos,
+                });
+                commands.entity(dirty_entity).remove::<DirtyChunk>();
             }
         } else {
             // let dirty_entity = current_chunks.get_entity(*dirty_chunk_pos).unwrap();

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, time::Duration};
+use std::{collections::HashSet, ops::Deref, time::Duration};
 
 use bevy::{
     math::Vec3A,
@@ -99,15 +99,163 @@ impl QuadGroups {
                 quad,
             })
     }
+
+    pub fn iter_with_ao<'a, C, V>(
+        &'a self,
+        chunk: &'a C,
+        loadable_types: &'a LoadableTypes,
+    ) -> impl Iterator<Item = FaceWithAO<'a>>
+    where
+        C: Chunk<Output = V>,
+        V: Voxel,
+    {
+        self.iter()
+            .map(|face| FaceWithAO::new(face, chunk, loadable_types))
+    }
 }
 
-impl<'a> Face<'a> {
-    pub fn indices(&self, start: u32, flipped: bool) -> [u32; 6] {
-        if flipped {
+pub(crate) fn face_aos<C, V>(face: &Face, chunk: &C, loadable_types: &LoadableTypes) -> [u32; 4]
+where
+    C: Chunk<Output = V>,
+    V: Voxel,
+{
+    let [x, y, z] = face.voxel();
+    let (x, y, z) = (x as u32, y as u32, z as u32);
+
+    match (face.side.axis, face.side.positive) {
+        (Axis::X, false) => side_aos([
+            chunk.get(x - 1, y, z + 1, loadable_types),
+            chunk.get(x - 1, y - 1, z + 1, loadable_types),
+            chunk.get(x - 1, y - 1, z, loadable_types),
+            chunk.get(x - 1, y - 1, z - 1, loadable_types),
+            chunk.get(x - 1, y, z - 1, loadable_types),
+            chunk.get(x - 1, y + 1, z - 1, loadable_types),
+            chunk.get(x - 1, y + 1, z, loadable_types),
+            chunk.get(x - 1, y + 1, z + 1, loadable_types),
+        ]),
+        (Axis::X, true) => side_aos([
+            chunk.get(x + 1, y, z - 1, loadable_types),
+            chunk.get(x + 1, y - 1, z - 1, loadable_types),
+            chunk.get(x + 1, y - 1, z, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
+            chunk.get(x + 1, y, z + 1, loadable_types),
+            chunk.get(x + 1, y + 1, z + 1, loadable_types),
+            chunk.get(x + 1, y + 1, z, loadable_types),
+            chunk.get(x + 1, y + 1, z - 1, loadable_types),
+        ]),
+        (Axis::Y, false) => side_aos([
+            chunk.get(x - 1, y - 1, z, loadable_types),
+            chunk.get(x - 1, y - 1, z + 1, loadable_types),
+            chunk.get(x, y - 1, z + 1, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
+            chunk.get(x + 1, y - 1, z, loadable_types),
+            chunk.get(x + 1, y - 1, z - 1, loadable_types),
+            chunk.get(x, y - 1, z - 1, loadable_types),
+            chunk.get(x - 1, y - 1, z - 1, loadable_types),
+        ]),
+        (Axis::Y, true) => side_aos([
+            chunk.get(x, y + 1, z + 1, loadable_types),
+            chunk.get(x - 1, y + 1, z + 1, loadable_types),
+            chunk.get(x - 1, y + 1, z, loadable_types),
+            chunk.get(x - 1, y + 1, z - 1, loadable_types),
+            chunk.get(x, y + 1, z - 1, loadable_types),
+            chunk.get(x + 1, y + 1, z - 1, loadable_types),
+            chunk.get(x + 1, y + 1, z, loadable_types),
+            chunk.get(x + 1, y + 1, z + 1, loadable_types),
+        ]),
+        (Axis::Z, false) => side_aos([
+            chunk.get(x - 1, y, z - 1, loadable_types),
+            chunk.get(x - 1, y - 1, z - 1, loadable_types),
+            chunk.get(x, y - 1, z - 1, loadable_types),
+            chunk.get(x + 1, y - 1, z - 1, loadable_types),
+            chunk.get(x + 1, y, z - 1, loadable_types),
+            chunk.get(x + 1, y + 1, z - 1, loadable_types),
+            chunk.get(x, y + 1, z - 1, loadable_types),
+            chunk.get(x - 1, y + 1, z - 1, loadable_types),
+        ]),
+        (Axis::Z, true) => side_aos([
+            chunk.get(x + 1, y, z + 1, loadable_types),
+            chunk.get(x + 1, y - 1, z + 1, loadable_types),
+            chunk.get(x, y - 1, z + 1, loadable_types),
+            chunk.get(x - 1, y - 1, z + 1, loadable_types),
+            chunk.get(x - 1, y, z + 1, loadable_types),
+            chunk.get(x - 1, y + 1, z + 1, loadable_types),
+            chunk.get(x, y + 1, z + 1, loadable_types),
+            chunk.get(x + 1, y + 1, z + 1, loadable_types),
+        ]),
+    }
+}
+
+pub struct FaceWithAO<'a> {
+    face: Face<'a>,
+    aos: [u32; 4],
+}
+
+impl<'a> FaceWithAO<'a> {
+    pub fn new<C, V>(face: Face<'a>, chunk: &C, loadable_types: &LoadableTypes) -> Self
+    where
+        C: Chunk<Output = V>,
+        V: Voxel,
+    {
+        let aos = face_aos(&face, chunk, loadable_types);
+        Self { face, aos }
+    }
+
+    pub fn aos(&self) -> [u32; 4] {
+        self.aos
+    }
+
+    pub fn indices(&self, start: u32) -> [u32; 6] {
+        let aos = self.aos();
+
+        if (aos[1] + aos[2]) > (aos[0] + aos[3]) {
             [start, start + 2, start + 1, start + 1, start + 2, start + 3]
         } else {
             [start, start + 3, start + 1, start, start + 2, start + 3]
         }
+    }
+}
+
+pub(crate) fn ao_value(side1: bool, corner: bool, side2: bool) -> u32 {
+    match (side1, corner, side2) {
+        (true, _, true) => 0,
+        (true, true, false) | (false, true, true) => 1,
+        (false, false, false) => 3,
+        _ => 2,
+    }
+}
+
+pub(crate) fn side_aos<V: Voxel>(neighbors: [V; 8]) -> [u32; 4] {
+    let ns = [
+        neighbors[0].visibility() == OPAQUE,
+        neighbors[1].visibility() == OPAQUE,
+        neighbors[2].visibility() == OPAQUE,
+        neighbors[3].visibility() == OPAQUE,
+        neighbors[4].visibility() == OPAQUE,
+        neighbors[5].visibility() == OPAQUE,
+        neighbors[6].visibility() == OPAQUE,
+        neighbors[7].visibility() == OPAQUE,
+    ];
+
+    [
+        ao_value(ns[0], ns[1], ns[2]),
+        ao_value(ns[2], ns[3], ns[4]),
+        ao_value(ns[6], ns[7], ns[0]),
+        ao_value(ns[4], ns[5], ns[6]),
+    ]
+}
+
+impl<'a> Deref for FaceWithAO<'a> {
+    type Target = Face<'a>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.face
+    }
+}
+
+impl<'a> Face<'a> {
+    pub fn indices(&self, start: u32) -> [u32; 6] {
+        [start, start + 2, start + 1, start + 1, start + 2, start + 3]
     }
 
     pub fn positions(&self, voxel_size: f32) -> [[f32; 3]; 4] {
@@ -200,169 +348,6 @@ impl<'a> Face<'a> {
 
 pub struct MeshChunkEvent {
     pub pos: IVec3,
-}
-
-// pub struct ChunkMesh {
-//     pub positions: Vec<[f32; 3]>,
-//     pub normals: Vec<[f32; 3]>,
-//     pub uvs: Vec<[f32; 2]>,
-//     pub indices: Vec<u32>,
-//     pub ao: Vec<u8>,
-// }
-
-// TODO: Fix the one quad not being flipped
-pub fn calculate_ao<C, T>(
-    chunk: &C,
-    current_side: Side,
-    x: u32,
-    y: u32,
-    z: u32,
-    loadable_types: &LoadableTypes,
-) -> [u8; 4]
-where
-    C: Chunk<Output = T>,
-    T: Voxel,
-{
-    let neighbours: [T; 8];
-    if current_side == Side::new(Axis::X, false) {
-        neighbours = [
-            chunk.get(x - 1, y, z - 1, loadable_types),
-            chunk.get(x - 1, y - 1, z - 1, loadable_types),
-            chunk.get(x - 1, y - 1, z, loadable_types),
-            chunk.get(x - 1, y - 1, z + 1, loadable_types),
-            chunk.get(x - 1, y, z + 1, loadable_types),
-            chunk.get(x - 1, y + 1, z + 1, loadable_types),
-            chunk.get(x - 1, y + 1, z, loadable_types),
-            chunk.get(x - 1, y + 1, z - 1, loadable_types),
-        ];
-    } else if current_side == Side::new(Axis::X, true) {
-        neighbours = [
-            chunk.get(x + 1, y, z + 1, loadable_types),
-            chunk.get(x + 1, y - 1, z + 1, loadable_types),
-            chunk.get(x + 1, y - 1, z, loadable_types),
-            chunk.get(x + 1, y - 1, z - 1, loadable_types),
-            chunk.get(x + 1, y, z - 1, loadable_types),
-            chunk.get(x + 1, y + 1, z - 1, loadable_types),
-            chunk.get(x + 1, y + 1, z, loadable_types),
-            chunk.get(x + 1, y + 1, z + 1, loadable_types),
-        ];
-    } else if current_side == Side::new(Axis::Y, false) {
-        neighbours = [
-            chunk.get(x + 1, y - 1, z, loadable_types),
-            chunk.get(x + 1, y - 1, z + 1, loadable_types),
-            chunk.get(x, y - 1, z + 1, loadable_types),
-            chunk.get(x - 1, y - 1, z + 1, loadable_types),
-            chunk.get(x - 1, y - 1, z, loadable_types),
-            chunk.get(x - 1, y - 1, z - 1, loadable_types),
-            chunk.get(x, y - 1, z - 1, loadable_types),
-            chunk.get(x + 1, y - 1, z - 1, loadable_types),
-        ];
-    } else if current_side == Side::new(Axis::Y, true) {
-        neighbours = [
-            chunk.get(x, y + 1, z - 1, loadable_types),
-            chunk.get(x - 1, y + 1, z - 1, loadable_types),
-            chunk.get(x - 1, y + 1, z, loadable_types),
-            chunk.get(x - 1, y + 1, z + 1, loadable_types),
-            chunk.get(x, y + 1, z + 1, loadable_types),
-            chunk.get(x + 1, y + 1, z + 1, loadable_types),
-            chunk.get(x + 1, y + 1, z, loadable_types),
-            chunk.get(x + 1, y + 1, z - 1, loadable_types),
-        ];
-    } else if current_side == Side::new(Axis::Z, true) {
-        neighbours = [
-            chunk.get(x - 1, y, z + 1, loadable_types),
-            chunk.get(x - 1, y - 1, z + 1, loadable_types),
-            chunk.get(x, y - 1, z + 1, loadable_types),
-            chunk.get(x + 1, y - 1, z + 1, loadable_types),
-            chunk.get(x + 1, y, z + 1, loadable_types),
-            chunk.get(x + 1, y + 1, z + 1, loadable_types),
-            chunk.get(x, y + 1, z + 1, loadable_types),
-            chunk.get(x - 1, y + 1, z + 1, loadable_types),
-        ];
-    } else {
-        neighbours = [
-            chunk.get(x + 1, y, z - 1, loadable_types),
-            chunk.get(x + 1, y - 1, z - 1, loadable_types),
-            chunk.get(x, y - 1, z - 1, loadable_types),
-            chunk.get(x - 1, y - 1, z - 1, loadable_types),
-            chunk.get(x - 1, y, z - 1, loadable_types),
-            chunk.get(x - 1, y + 1, z - 1, loadable_types),
-            chunk.get(x, y + 1, z - 1, loadable_types),
-            chunk.get(x + 1, y + 1, z - 1, loadable_types),
-        ];
-    }
-
-    let mut ao = [0; 4];
-    if neighbours[0].visibility() == VoxelVisibility::Opaque
-        && neighbours[2].visibility() == VoxelVisibility::Opaque
-    {
-        ao[1] = 0;
-    } else if neighbours[1].visibility() == VoxelVisibility::Opaque
-        && (neighbours[0].visibility() == VoxelVisibility::Opaque
-            || neighbours[2].visibility() == VoxelVisibility::Opaque)
-    {
-        ao[1] = 1;
-    } else if neighbours[0].visibility() == VoxelVisibility::Opaque
-        || neighbours[1].visibility() == VoxelVisibility::Opaque
-        || neighbours[2].visibility() == VoxelVisibility::Opaque
-    {
-        ao[1] = 2;
-    } else {
-        ao[1] = 3;
-    }
-    if neighbours[2].visibility() == VoxelVisibility::Opaque
-        && neighbours[4].visibility() == VoxelVisibility::Opaque
-    {
-        ao[0] = 0;
-    } else if neighbours[3].visibility() == VoxelVisibility::Opaque
-        && (neighbours[2].visibility() == VoxelVisibility::Opaque
-            || neighbours[4].visibility() == VoxelVisibility::Opaque)
-    {
-        ao[0] = 1;
-    } else if neighbours[2].visibility() == VoxelVisibility::Opaque
-        || neighbours[3].visibility() == VoxelVisibility::Opaque
-        || neighbours[4].visibility() == VoxelVisibility::Opaque
-    {
-        ao[0] = 2;
-    } else {
-        ao[0] = 3;
-    }
-    if neighbours[4].visibility() == VoxelVisibility::Opaque
-        && neighbours[6].visibility() == VoxelVisibility::Opaque
-    {
-        ao[2] = 0;
-    } else if neighbours[5].visibility() == VoxelVisibility::Opaque
-        && (neighbours[4].visibility() == VoxelVisibility::Opaque
-            || neighbours[6].visibility() == VoxelVisibility::Opaque)
-    {
-        ao[2] = 1;
-    } else if neighbours[4].visibility() == VoxelVisibility::Opaque
-        || neighbours[5].visibility() == VoxelVisibility::Opaque
-        || neighbours[6].visibility() == VoxelVisibility::Opaque
-    {
-        ao[2] = 2;
-    } else {
-        ao[2] = 3;
-    }
-    if neighbours[6].visibility() == VoxelVisibility::Opaque
-        && neighbours[0].visibility() == VoxelVisibility::Opaque
-    {
-        ao[3] = 0;
-    } else if neighbours[7].visibility() == VoxelVisibility::Opaque
-        && (neighbours[6].visibility() == VoxelVisibility::Opaque
-            || neighbours[0].visibility() == VoxelVisibility::Opaque)
-    {
-        ao[3] = 1;
-    } else if neighbours[6].visibility() == VoxelVisibility::Opaque
-        || neighbours[7].visibility() == VoxelVisibility::Opaque
-        || neighbours[0].visibility() == VoxelVisibility::Opaque
-    {
-        ao[3] = 2;
-    } else {
-        ao[3] = 3;
-    }
-
-    ao
 }
 
 pub fn generate_mesh<C, T>(
@@ -651,25 +636,11 @@ pub fn process_queue(
                     let mut normals = Vec::new();
                     let mut uvs = Vec::new();
                     let mut ao = Vec::new();
-                    for face in mesh_result.iter() {
-                        let calculated_ao = calculate_ao(
-                            &raw_chunk,
-                            face.side,
-                            face.voxel()[0] as u32,
-                            face.voxel()[1] as u32,
-                            face.voxel()[2] as u32,
-                            &cloned_types,
-                        );
-                        if (calculated_ao[1] + calculated_ao[3])
-                            > (calculated_ao[2] + calculated_ao[0])
-                        {
-                            indices.extend_from_slice(&face.indices(positions.len() as u32, true));
-                        } else {
-                            indices.extend_from_slice(&face.indices(positions.len() as u32, false));
-                        }
+                    for face in mesh_result.iter_with_ao(&raw_chunk, &cloned_types) {
+                        indices.extend_from_slice(&face.indices(positions.len() as u32));
                         positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
                         normals.extend_from_slice(&face.normals());
-                        ao.extend_from_slice(&calculated_ao);
+                        ao.extend_from_slice(&face.aos());
 
                         let matched_index = match (face.side.axis, face.side.positive) {
                             (Axis::X, false) => 2,
@@ -740,26 +711,10 @@ pub fn process_queue(
                     let mut indices = Vec::new();
                     let mut normals = Vec::new();
                     let mut uvs = Vec::new();
-                    let mut ao = Vec::new();
                     for face in mesh_result.iter() {
-                        let calculated_ao = calculate_ao(
-                            &raw_chunk,
-                            face.side,
-                            face.voxel()[0] as u32,
-                            face.voxel()[1] as u32,
-                            face.voxel()[2] as u32,
-                            &cloned_types,
-                        );
-                        if (calculated_ao[1] + calculated_ao[3])
-                            > (calculated_ao[2] + calculated_ao[0])
-                        {
-                            indices.extend_from_slice(&face.indices(positions.len() as u32, true));
-                        } else {
-                            indices.extend_from_slice(&face.indices(positions.len() as u32, false));
-                        }
+                        indices.extend_from_slice(&face.indices(positions.len() as u32));
                         positions.extend_from_slice(&face.positions(1.0)); // Voxel size is 1m
                         normals.extend_from_slice(&face.normals());
-                        ao.extend_from_slice(&calculated_ao);
 
                         let matched_index = match (face.side.axis, face.side.positive) {
                             (Axis::X, false) => 2,
@@ -811,7 +766,6 @@ pub fn process_queue(
                         .tuples::<(u32, u32, u32)>()
                         .map(|(x, y, z)| [x, y, z])
                         .collect::<Vec<_>>();
-                    let final_ao = ao_convert(ao);
                     let mut transparent_mesh = Mesh::new(PrimitiveTopology::TriangleList);
                     let transparent_collider = if !indices.is_empty() {
                         Collider::trimesh(col_vertices, col_indices)
@@ -822,7 +776,6 @@ pub fn process_queue(
                     transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions.clone());
                     transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
                     transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-                    transparent_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, final_ao);
 
                     MeshedChunk {
                         transparent_mesh,
@@ -836,7 +789,6 @@ pub fn process_queue(
         })
         .for_each(|(_chunk_pos, chunk)| {
             let _chunk_id = commands.spawn(chunk).id();
-            // current_chunks.insert_entity(chunk_pos, chunk_id);
         });
 }
 
@@ -860,7 +812,8 @@ pub fn calculate_coords(index: usize, tile_size: Vec2, tilesheet_size: Vec2) -> 
     face_tex[1][1] = max_y;
     face_tex
 }
-fn ao_convert(ao: Vec<u8>) -> Vec<[f32; 4]> {
+
+fn ao_convert(ao: Vec<u32>) -> Vec<[f32; 4]> {
     let mut res = Vec::new();
     for value in ao {
         match value {
