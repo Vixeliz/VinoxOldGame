@@ -2,6 +2,11 @@
 
 ## HEAVILY IN DEVELOPMENT STILL NOTHING HERE IS FINAL AND THE CODE NEEDS REFACTORING
 
+## This will be fixed soon but right now the game will crash unless if you copy client/assets to your systems data directory
+Macos: /Users/username/Application\ Support/com.vinox.vinox/assets
+Linux: /home/username/.local/share/vinox/assets
+Windows(?): %APPDATA%/vinox/data/assets
+
 Sandbox survival game made with Rust and bevy.
 The goal of this project is peaceful sandbox experience focused around exploration, discovery, automation, and building. With some lore that doesn't get in your way
 
