@@ -1,11 +1,9 @@
 use bevy::{ecs::schedule::ShouldRun, prelude::*, render::primitives::Aabb, utils::FloatOrd};
 use bevy_rapier3d::prelude::Collider;
 
-use rand::prelude::*;
-
 use common::game::world::chunk::{
-    world_to_chunk, Chunk, ChunkComp, ChunkPos, CurrentChunks, LoadableTypes, RawChunk,
-    RemoveChunk, SimulationDistance, ViewDistance, CHUNK_BOUND, CHUNK_SIZE,
+    world_to_chunk, ChunkComp, ChunkPos, CurrentChunks, LoadableTypes, RawChunk, RemoveChunk,
+    SimulationDistance, ViewDistance, CHUNK_BOUND, CHUNK_SIZE,
 };
 
 use crate::states::game::{
