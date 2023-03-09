@@ -1,17 +1,10 @@
 use bevy::prelude::*;
+use bevy_quinnet::shared::ClientId;
 
 #[derive(Resource)]
 pub struct NetworkIP(pub String);
 
-use std::time::Duration;
-
-use bevy_renet::renet::{
-    ChannelConfig, ChunkChannelConfig, ReliableChannelConfig, RenetConnectionConfig,
-    UnreliableChannelConfig,
-};
 use serde::{Deserialize, Serialize};
-
-use crate::game::world::chunk::RawChunk;
 
 pub const PROTOCOL_ID: u64 = 7;
 pub const RELIABLE_CHANNEL_MAX_LENGTH: u64 = 10240;
@@ -21,21 +14,15 @@ pub struct NetworkedEntity;
 
 #[derive(Debug, Component, Default)]
 pub struct Player {
-    pub id: u64,
-}
-
-#[derive(Debug, Serialize, Deserialize, Default)]
-pub struct PlayerPos {
-    pub translation: [f32; 3],
-    pub rotation: [f32; 4],
+    pub id: ClientId,
 }
 
 // Networking related
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct NetworkedEntities {
     pub entities: Vec<Entity>,
-    pub translations: Vec<[f32; 3]>,
-    pub rotations: Vec<[f32; 4]>,
+    pub translations: Vec<Vec3>,
+    pub rotations: Vec<Vec4>,
 }
 
 #[derive(Default, Resource)]
@@ -43,147 +30,55 @@ pub struct EntityBuffer {
     pub entities: [NetworkedEntities; 30],
 }
 
-pub enum ClientChannel {
-    Position,
-    Commands,
-}
-
-pub enum ServerChannel {
-    ServerMessages,
-    NetworkedEntities,
-    LevelDataSmall,
-    LevelDataLarge,
-}
-
-#[derive(Debug, Serialize, Deserialize, Component)]
-pub enum LevelData {
-    ChunkCreate { chunk_data: RawChunk, pos: [i32; 3] },
-}
-
-#[derive(Debug, Serialize, Deserialize, Component)]
-pub enum Commands {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ClientMessage {
+    Position {
+        player_pos: Vec3,
+        player_rot: Vec4,
+    },
     Interact {
         entity: Entity,
         attack: bool,
     },
 
     SentBlock {
-        chunk_pos: [i32; 3],
+        chunk_pos: IVec3,
         voxel_pos: [u8; 3],
         block_type: String,
     },
+    Join {
+        user_name: String, // Username is just for display we use an id for the actual identification of clients
+        id: ClientId,
+    },
+    Leave {
+        id: ClientId,
+    },
 }
 
-#[derive(Debug, Serialize, Deserialize, Component)]
-pub enum ServerMessages {
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum ServerMessage {
+    ClientId {
+        id: ClientId,
+    },
     PlayerCreate {
         entity: Entity,
-        id: u64,
-        translation: [f32; 3],
-        rotation: [f32; 4],
+        id: ClientId,
+        translation: Vec3,
+        rotation: Vec4,
     },
     PlayerRemove {
-        id: u64,
+        id: ClientId,
     },
     SentBlock {
-        chunk_pos: [i32; 3],
+        chunk_pos: IVec3,
         voxel_pos: [u8; 3],
         block_type: String,
     },
-}
-
-impl ClientChannel {
-    pub fn channels_config() -> Vec<ChannelConfig> {
-        vec![
-            UnreliableChannelConfig {
-                channel_id: Self::Position.into(),
-                sequenced: true,
-                message_send_queue_size: 2048,
-                message_receive_queue_size: 2048,
-                ..Default::default()
-            }
-            .into(),
-            ReliableChannelConfig {
-                channel_id: Self::Commands.into(),
-                message_resend_time: Duration::ZERO,
-                ..Default::default()
-            }
-            .into(),
-        ]
-    }
-}
-
-impl From<ClientChannel> for u8 {
-    fn from(channel_id: ClientChannel) -> Self {
-        match channel_id {
-            ClientChannel::Position => 0,
-            ClientChannel::Commands => 1,
-        }
-    }
-}
-
-impl ServerChannel {
-    pub fn channels_config() -> Vec<ChannelConfig> {
-        vec![
-            UnreliableChannelConfig {
-                channel_id: Self::NetworkedEntities.into(),
-                sequenced: true, // We don't care about old positions
-                message_send_queue_size: 2048,
-                message_receive_queue_size: 2048,
-                ..Default::default()
-            }
-            .into(),
-            ReliableChannelConfig {
-                channel_id: Self::ServerMessages.into(),
-                message_resend_time: Duration::from_millis(100),
-                ..Default::default()
-            }
-            .into(),
-            ChunkChannelConfig {
-                channel_id: Self::LevelDataLarge.into(),
-                message_send_queue_size: 700,
-                ..Default::default()
-            }
-            .into(),
-            ReliableChannelConfig {
-                channel_id: Self::LevelDataSmall.into(),
-                message_resend_time: Duration::from_millis(100),
-                max_message_size: RELIABLE_CHANNEL_MAX_LENGTH,
-                packet_budget: RELIABLE_CHANNEL_MAX_LENGTH * 5,
-                message_send_queue_size: 2500000,
-                message_receive_queue_size: 2500000,
-                ..Default::default()
-            }
-            .into(),
-        ]
-    }
-}
-
-impl From<ServerChannel> for u8 {
-    fn from(channel_id: ServerChannel) -> Self {
-        match channel_id {
-            ServerChannel::NetworkedEntities => 0,
-            ServerChannel::ServerMessages => 1,
-            ServerChannel::LevelDataLarge => 2,
-            ServerChannel::LevelDataSmall => 3,
-        }
-    }
-}
-
-pub fn client_connection_config() -> RenetConnectionConfig {
-    RenetConnectionConfig {
-        send_channels_config: ClientChannel::channels_config(),
-        receive_channels_config: ServerChannel::channels_config(),
-        max_packet_size: RELIABLE_CHANNEL_MAX_LENGTH * 6,
-        ..Default::default()
-    }
-}
-
-pub fn server_connection_config() -> RenetConnectionConfig {
-    RenetConnectionConfig {
-        send_channels_config: ServerChannel::channels_config(),
-        receive_channels_config: ClientChannel::channels_config(),
-        max_packet_size: RELIABLE_CHANNEL_MAX_LENGTH * 6,
-        ..Default::default()
-    }
+    NetworkedEntities {
+        networked_entities: NetworkedEntities,
+    },
+    LevelData {
+        chunk_data: Vec<u8>,
+        pos: IVec3,
+    },
 }

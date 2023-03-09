@@ -3,31 +3,24 @@ use std::{io::Cursor, time::Duration};
 use belly::prelude::*;
 use bevy::prelude::*;
 
+use bevy_quinnet::client::Client;
 use bevy_tweening::{
     lens::{TransformPositionLens, TransformRotationLens},
     *,
 };
 
-use bevy_renet::renet::RenetClient;
 use common::{
-    game::bundles::PlayerBundleBuilder,
-    networking::components::{
-        ClientChannel, EntityBuffer, LevelData, NetworkedEntities, PlayerPos, ServerChannel,
-        ServerMessages,
-    },
+    game::{bundles::PlayerBundleBuilder, world::chunk::RawChunk},
+    networking::components::{ClientMessage, EntityBuffer, ServerMessage},
 };
-use iyes_loopless::state::NextState;
 use zstd::stream::copy_decode;
 
-use crate::{
-    components::GameState,
-    states::game::{
-        networking::components::ControlledPlayer,
-        world::chunk::{CreateChunkEvent, PlayerChunk, SetBlockEvent},
-    },
+use crate::states::game::{
+    networking::components::ControlledPlayer,
+    world::chunk::{CreateChunkEvent, PlayerChunk, SetBlockEvent},
 };
 
-use super::components::{ClientLobby, NetworkMapping, PlayerInfo};
+use super::components::{ClientData, ClientLobby, NetworkMapping, PlayerInfo};
 
 #[derive(Component)]
 pub struct HighLightCube;
@@ -37,13 +30,39 @@ pub struct JustSpawned {
     timer: Timer,
 }
 
+pub fn get_id(
+    mut client: ResMut<Client>,
+    mut client_data: ResMut<ClientData>,
+    mut has_connected: Local<bool>,
+) {
+    if *has_connected {
+    } else {
+        while let Some(message) = client
+            .connection_mut()
+            .try_receive_message::<ServerMessage>()
+        {
+            if let ServerMessage::ClientId { id } = message {
+                client_data.0 = id;
+                client
+                    .connection_mut()
+                    .try_send_message(ClientMessage::Join {
+                        user_name: "test".to_string(),
+                        id,
+                    });
+                *has_connected = true;
+            }
+        }
+    }
+}
+
 //TODO: Refactor this is a lot in one function
 #[allow(clippy::clone_on_copy)]
 #[allow(clippy::too_many_arguments)]
 pub fn client_sync_players(
     mut cmd1: Commands,
     mut cmd2: Commands,
-    mut client: ResMut<RenetClient>,
+    mut client: ResMut<Client>,
+    client_data: Res<ClientData>,
     mut lobby: ResMut<ClientLobby>,
     mut network_mapping: ResMut<NetworkMapping>,
     mut entity_buffer: ResMut<EntityBuffer>,
@@ -54,120 +73,101 @@ pub fn client_sync_players(
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
 ) {
-    let client_id = client.client_id();
-    while let Some(message) = client.receive_message(ServerChannel::ServerMessages) {
-        let server_message = bincode::deserialize(&message).unwrap();
-        match server_message {
-            ServerMessages::PlayerCreate {
-                id,
-                translation,
-                entity,
-                rotation,
-            } => {
-                let mut client_entity = cmd1.spawn_empty();
-                if client_id == id {
-                    println!("You connected.");
-                    cmd2.spawn(PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.001 })),
-                        material: materials.add(StandardMaterial {
-                            base_color: Color::rgba(1.1, 1.1, 1.1, 1.0),
-                            base_color_texture: Some(asset_server.load("outline.png")),
-                            alpha_mode: AlphaMode::Blend,
-                            unlit: true,
-                            ..Default::default()
-                        }),
-                        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-                        ..default()
-                    })
-                    .insert(HighLightCube);
+    if client_data.0 != 0 {
+        while let Some(message) = client
+            .connection_mut()
+            .try_receive_message::<ServerMessage>()
+        {
+            match message {
+                ServerMessage::PlayerCreate {
+                    id,
+                    translation,
+                    entity,
+                    rotation,
+                } => {
+                    let mut client_entity = cmd1.spawn_empty();
+                    if client_data.0 == id {
+                        println!("You connected.");
+                        cmd2.spawn(PbrBundle {
+                            mesh: meshes.add(Mesh::from(shape::Cube { size: 1.001 })),
+                            material: materials.add(StandardMaterial {
+                                base_color: Color::rgba(1.1, 1.1, 1.1, 1.0),
+                                base_color_texture: Some(asset_server.load("outline.png")),
+                                alpha_mode: AlphaMode::Blend,
+                                unlit: true,
+                                ..Default::default()
+                            }),
+                            transform: Transform::from_xyz(0.0, 0.5, 0.0),
+                            ..default()
+                        })
+                        .insert(HighLightCube);
 
-                    client_entity
-                        .insert(player_builder.build(translation.into(), id, true))
-                        .insert(ControlledPlayer)
-                        .insert(JustSpawned {
-                            timer: Timer::new(Duration::from_secs(10), TimerMode::Once),
-                        });
-                    cmd2.add(eml! {
+                        client_entity
+                            .insert(player_builder.build(translation.into(), id, true))
+                            .insert(ControlledPlayer)
+                            .insert(JustSpawned {
+                                timer: Timer::new(Duration::from_secs(10), TimerMode::Once),
+                            });
+                        cmd2.add(eml! {
                         <body s:padding="50px" s:margin-left="5px" s:justify-content="flex-start" s:align-items="flex-start">
                             "ChunkPos: "{from!(PlayerChunk:chunk_pos | fmt.c("{c}"))}
                         </body>
                     });
-                } else {
-                    println!("Player {id} connected.");
-                    client_entity.insert(player_builder.build(translation.into(), id, false));
-                    client_entity.insert(
-                        Transform::from_translation(translation.into())
-                            .with_rotation(Quat::from_vec4(rotation.into())),
-                    );
+                    } else {
+                        println!("Player {id} connected.");
+                        client_entity.insert(player_builder.build(translation.into(), id, false));
+                        client_entity.insert(
+                            Transform::from_translation(translation.into())
+                                .with_rotation(Quat::from_vec4(rotation.into())),
+                        );
+                    }
+
+                    let player_info = PlayerInfo {
+                        server_entity: entity,
+                        client_entity: client_entity.id(),
+                    };
+                    lobby.players.insert(id, player_info);
+                    network_mapping.0.insert(entity, client_entity.id());
                 }
-
-                let player_info = PlayerInfo {
-                    server_entity: entity,
-                    client_entity: client_entity.id(),
-                };
-                lobby.players.insert(id, player_info);
-                network_mapping.0.insert(entity, client_entity.id());
-            }
-            ServerMessages::PlayerRemove { id } => {
-                println!("Player {id} disconnected.");
-                if let Some(PlayerInfo {
-                    server_entity,
-                    client_entity,
-                }) = lobby.players.remove(&id)
-                {
-                    cmd1.entity(client_entity).despawn();
-                    network_mapping.0.remove(&server_entity);
+                ServerMessage::PlayerRemove { id } => {
+                    println!("Player {id} disconnected.");
+                    if let Some(PlayerInfo {
+                        server_entity,
+                        client_entity,
+                    }) = lobby.players.remove(&id)
+                    {
+                        cmd1.entity(client_entity).despawn();
+                        network_mapping.0.remove(&server_entity);
+                    }
                 }
-            }
-            ServerMessages::SentBlock {
-                chunk_pos,
-                voxel_pos,
-                block_type,
-            } => block_event.send(SetBlockEvent {
-                chunk_pos: chunk_pos.into(),
-                voxel_pos: UVec3::new(
-                    voxel_pos[0] as u32,
-                    voxel_pos[1] as u32,
-                    voxel_pos[2] as u32,
-                ),
-                block_type,
-            }),
-        }
-    }
-
-    while let Some(message) = client.receive_message(ServerChannel::NetworkedEntities) {
-        let networked_entities: NetworkedEntities = bincode::deserialize(&message).unwrap();
-        let arr_len = entity_buffer.entities.len() - 1;
-        entity_buffer.entities.rotate_left(1);
-        entity_buffer.entities[arr_len] = networked_entities;
-    }
-
-    while let Some(message) = client.receive_message(ServerChannel::LevelDataSmall) {
-        let mut temp_output = Cursor::new(Vec::new());
-        copy_decode(&message[..], &mut temp_output).unwrap();
-        let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
-        match level_data {
-            LevelData::ChunkCreate { chunk_data, pos } => {
-                // println!("Recieved chunk {pos:?}");
-                chunk_event.send(CreateChunkEvent {
-                    raw_chunk: chunk_data,
-                    pos: pos.into(),
-                });
-            }
-        }
-    }
-
-    while let Some(message) = client.receive_message(ServerChannel::LevelDataLarge) {
-        let mut temp_output = Cursor::new(Vec::new());
-        copy_decode(&message[..], &mut temp_output).unwrap();
-        let level_data: LevelData = bincode::deserialize(temp_output.get_ref()).unwrap();
-        match level_data {
-            LevelData::ChunkCreate { chunk_data, pos } => {
-                // println!("Recieved chunk {pos:?}");
-                chunk_event.send(CreateChunkEvent {
-                    raw_chunk: chunk_data,
-                    pos: pos.into(),
-                });
+                ServerMessage::SentBlock {
+                    chunk_pos,
+                    voxel_pos,
+                    block_type,
+                } => block_event.send(SetBlockEvent {
+                    chunk_pos: chunk_pos.into(),
+                    voxel_pos: UVec3::new(
+                        voxel_pos[0] as u32,
+                        voxel_pos[1] as u32,
+                        voxel_pos[2] as u32,
+                    ),
+                    block_type,
+                }),
+                ServerMessage::NetworkedEntities { networked_entities } => {
+                    let arr_len = entity_buffer.entities.len() - 1;
+                    entity_buffer.entities.rotate_left(1);
+                    entity_buffer.entities[arr_len] = networked_entities;
+                }
+                ServerMessage::LevelData { chunk_data, pos } => {
+                    let mut temp_output = Cursor::new(Vec::new());
+                    copy_decode(&chunk_data[..], &mut temp_output).unwrap();
+                    let level_data: RawChunk = bincode::deserialize(temp_output.get_ref()).unwrap();
+                    chunk_event.send(CreateChunkEvent {
+                        raw_chunk: level_data,
+                        pos: pos.into(),
+                    });
+                }
+                _ => {}
             }
         }
     }
@@ -178,7 +178,7 @@ pub fn lerp_new_location(
     entity_buffer: ResMut<EntityBuffer>,
     lobby: ResMut<ClientLobby>,
     network_mapping: ResMut<NetworkMapping>,
-    client: ResMut<RenetClient>,
+    client_data: ResMut<ClientData>,
     transform_query: Query<&Transform>,
 ) {
     for i in 0..entity_buffer.entities[0].entities.len() {
@@ -193,7 +193,7 @@ pub fn lerp_new_location(
                 ..Default::default()
             }
             .with_rotation(rotation);
-            if let Some(player_entity) = lobby.players.get(&client.client_id()) {
+            if let Some(player_entity) = lobby.players.get(&client_data.0) {
                 if player_entity.client_entity != *entity {
                     if let Ok(old_transform) = transform_query.get(*entity) {
                         let tween = Tween::new(
@@ -232,26 +232,29 @@ pub fn lerp_new_location(
 pub fn client_send_naive_position(
     mut transform_query: Query<&mut Transform, With<ControlledPlayer>>,
     mut camera_query: Query<&mut Transform, (With<Camera>, Without<ControlledPlayer>)>,
-    mut client: ResMut<RenetClient>,
+    mut client: ResMut<Client>,
 ) {
     if let Ok(transform) = transform_query.get_single_mut() {
         if let Ok(camera_transform) = camera_query.get_single_mut() {
-            let player_pos = PlayerPos {
-                translation: transform.translation.into(),
-                rotation: camera_transform.rotation.into(),
-            };
-            let input_message = bincode::serialize(&player_pos).unwrap();
-
-            client.send_message(ClientChannel::Position, input_message);
+            client
+                .connection_mut()
+                .send_message_on(
+                    bevy_quinnet::shared::channel::ChannelId::Unreliable,
+                    ClientMessage::Position {
+                        player_pos: transform.translation,
+                        player_rot: Vec4::from(camera_transform.rotation),
+                    },
+                )
+                .unwrap();
         }
     }
 }
-pub fn client_disconect(mut commands: Commands, client: Res<RenetClient>) {
-    if client.disconnected().is_some() {
-        println!("{}", client.disconnected().unwrap());
-        commands.insert_resource(NextState(GameState::Menu));
-    }
-}
+// pub fn client_disconect(mut commands: Commands, client: Res<RenetClient>) {
+//     if client.disconnected().is_some() {
+//         println!("{}", client.disconnected().unwrap());
+//         commands.insert_resource(NextState(GameState::Menu));
+//     }
+// }
 
 // TODO: Have a more elegant way to wait on loading section or by actually waiting till all the intial chunks are loaded
 pub fn wait_for_chunks(

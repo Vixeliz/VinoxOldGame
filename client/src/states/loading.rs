@@ -1,5 +1,10 @@
 use bevy::{asset::LoadState, math::Vec3A, prelude::*, render::primitives::Aabb};
 
+use bevy_quinnet::client::{
+    certificate::CertificateVerificationMode,
+    connection::{ConnectionConfiguration, ConnectionEvent},
+    Client,
+};
 use common::{
     game::{
         bundles::{AssetsLoading, PlayerBundleBuilder},
@@ -7,7 +12,7 @@ use common::{
         storage::{convert_block, convert_entity},
         world::chunk::LoadableTypes,
     },
-    networking::components::{client_connection_config, NetworkIP, PROTOCOL_ID},
+    networking::components::NetworkIP,
 };
 use iyes_loopless::{prelude::AppLooplessStateExt, state::NextState};
 
@@ -16,49 +21,43 @@ use crate::{
     systems::despawn_with,
 };
 
-use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
+use std::collections::HashMap;
 
-use bevy_renet::renet::{ClientAuthentication, RenetClient, RenetError};
 use iyes_loopless::prelude::*;
+
+use super::game::networking::components::ClientData;
 extern crate common;
 
 //TODO: Right now we are building the client only as a multiplayer client. This is fine but eventually we need to have singleplayer.
 // To achieve this we will just have the client start up a server. But for now I am just going to use a dedicated one for testing
-pub fn new_client(mut commands: Commands, ip_res: Res<NetworkIP>) {
-    let port: String = ":25565".to_owned();
-    let server_addr = format!("{}{}", ip_res.0, port).parse().unwrap();
-    let socket = UdpSocket::bind("0.0.0.0:0").unwrap();
-    let connection_config = client_connection_config();
-    let current_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
+pub fn new_client(ip_res: Res<NetworkIP>, mut client: ResMut<Client>) {
+    client
+        .open_connection(
+            ConnectionConfiguration::new(ip_res.0.clone(), 25565, "0.0.0.0".to_string(), 0),
+            CertificateVerificationMode::SkipVerification,
+        )
         .unwrap();
-    let client_id = current_time.as_millis() as u64;
-    let authentication = ClientAuthentication::Unsecure {
-        protocol_id: PROTOCOL_ID,
-        client_id,
-        server_addr,
-        user_data: None,
-    };
-    commands.insert_resource(
-        RenetClient::new(current_time, socket, connection_config, authentication).unwrap(),
-    );
 }
 
 pub fn switch(
     mut commands: Commands,
-    client: Res<RenetClient>,
+    mut client: ResMut<Client>,
     loading: Res<AssetsLoading>,
     asset_server: Res<AssetServer>,
     mut loadable_assets: ResMut<LoadableAssets>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
     mut textures: ResMut<Assets<Image>>,
+    mut connected_event: EventReader<ConnectionEvent>,
 ) {
     match asset_server.get_group_load_state(loading.0.iter().map(|h| h.id)) {
         LoadState::Failed => {
             commands.insert_resource(NextState(GameState::Menu));
         }
         LoadState::Loaded => {
-            if client.is_connected() {
+            for _ in connected_event.iter() {
+                client.connection_mut().set_default_channel(
+                    bevy_quinnet::shared::channel::ChannelId::UnorderedReliable,
+                );
                 let mut texture_atlas_builder = TextureAtlasBuilder::default();
                 for handle in loadable_assets.block_textures.values() {
                     for item in handle {
@@ -75,26 +74,15 @@ pub fn switch(
                 let atlas_handle = texture_atlases.add(texture_atlas);
                 loadable_assets.block_atlas = atlas_handle;
                 commands.insert_resource(NextState(GameState::Game));
+                // remove the resource to drop the tracking handles
+                // commands.remove_resource::<AssetsLoading>();
+                // (note: if you don't have any other handles to the assets
+                // elsewhere, they will get unloaded after this)
             }
-            // remove the resource to drop the tracking handles
-            // commands.remove_resource::<AssetsLoading>();
-            // (note: if you don't have any other handles to the assets
-            // elsewhere, they will get unloaded after this)
         }
         _ => {
             // NotLoaded/Loading: not fully ready yet
         }
-    }
-}
-
-fn panic_on_error_system(
-    mut renet_error: EventReader<RenetError>,
-    mut commands: Commands,
-    _client: ResMut<RenetClient>,
-) {
-    for _e in renet_error.iter() {
-        commands.remove_resource::<RenetClient>();
-        commands.insert_resource(NextState(GameState::Menu));
     }
 }
 
@@ -212,7 +200,8 @@ pub struct LoadingPlugin;
 
 impl Plugin for LoadingPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(AssetsLoading::default())
+        app.insert_resource(ClientData::default())
+            .insert_resource(AssetsLoading::default())
             .insert_resource(LoadableTypes::default())
             .insert_resource(LoadableAssets::default())
             .add_system(switch.run_in_state(GameState::Loading))
@@ -221,9 +210,9 @@ impl Plugin for LoadingPlugin {
             .add_enter_system(GameState::Loading, load_entities)
             .add_enter_system(GameState::Loading, load_sounds)
             .add_enter_system(GameState::Loading, new_client)
-            .add_exit_system(GameState::Loading, despawn_with::<Loading>)
-            .add_system(panic_on_error_system.run_in_state(GameState::Loading))
-            .add_system(panic_on_error_system.run_in_state(GameState::Game));
+            .add_exit_system(GameState::Loading, despawn_with::<Loading>);
+        // .add_system(panic_on_error_system.run_in_state(GameState::Loading))
+        // .add_system(panic_on_error_system.run_in_state(GameState::Game));
         // .add_system_to_stage(
         //     CoreStage::PostUpdate,
         //     disconnect_on_exit.after(exit_on_all_closed),

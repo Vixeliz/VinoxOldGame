@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
+use bevy_quinnet::client::Client;
 use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, QueryFilter, RapierContext, Rot};
-use bevy_renet::renet::RenetClient;
 use common::{
     game::world::chunk::{voxel_to_world, world_to_voxel, ChunkComp, CurrentChunks, CHUNK_SIZE},
-    networking::components::{self, ClientChannel},
+    networking::components::ClientMessage,
 };
 
 use crate::states::game::{
@@ -39,7 +39,7 @@ pub fn interact(
     current_chunks: Res<CurrentChunks>,
     camera_query: Query<&GlobalTransform, With<Camera>>,
     rapier_context: Res<RapierContext>,
-    mut client: ResMut<RenetClient>,
+    mut client: ResMut<Client>,
     player_position: Query<&Transform, With<ControlledPlayer>>,
     mut cube_position: Query<
         (&mut Transform, &mut Visibility),
@@ -112,25 +112,23 @@ pub fn interact(
                             {
                                 chunk.chunk_data.add_block_state(&item_string.to_string());
                                 chunk.chunk_data.set_block(pos.1, item_string.to_string());
-                                let send_block = components::Commands::SentBlock {
-                                    chunk_pos: pos.0.into(),
-                                    voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
-                                    block_type: item_string.to_string(),
-                                };
-                                let input_message = bincode::serialize(&send_block).unwrap();
-
-                                client.send_message(ClientChannel::Commands, input_message);
+                                client.connection_mut().try_send_message(
+                                    ClientMessage::SentBlock {
+                                        chunk_pos: pos.0.into(),
+                                        voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
+                                        block_type: item_string.to_string(),
+                                    },
+                                );
                             }
                         } else if mouse_left {
                             chunk.chunk_data.set_block(pos.1, "air".to_string());
-                            let send_block = components::Commands::SentBlock {
-                                chunk_pos: pos.0.into(),
-                                voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
-                                block_type: "air".to_string(),
-                            };
-                            let input_message = bincode::serialize(&send_block).unwrap();
-
-                            client.send_message(ClientChannel::Commands, input_message);
+                            client
+                                .connection_mut()
+                                .try_send_message(ClientMessage::SentBlock {
+                                    chunk_pos: pos.0.into(),
+                                    voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
+                                    block_type: "air".to_string(),
+                                });
                         }
                         match pos.1.x {
                             1 => {

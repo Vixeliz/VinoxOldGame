@@ -1,21 +1,20 @@
 use crate::networking::syncing::NetworkingPlugin;
 use bevy::prelude::*;
+use bevy_quinnet::server::*;
 use common::{
     game::{
         bundles::PlayerBundleBuilder,
         scripting::{block::load::load_all_blocks, entity::load::load_all_entities},
         storage::{convert_block, convert_entity, BlockType, EntityType},
     },
-    networking::components::{server_connection_config, NetworkIP, PROTOCOL_ID},
+    networking::components::NetworkIP,
 };
 
 pub fn setup(mut commands: Commands, _chunk_manager: ChunkManager) {
     commands.spawn(LoadPoint(IVec3::new(0, 0, 0)));
 }
 
-use std::{collections::HashMap, net::UdpSocket, time::SystemTime};
-
-use bevy_renet::renet::{RenetError, RenetServer, ServerAuthentication, ServerConfig};
+use std::collections::HashMap;
 
 use super::world::chunk::{ChunkGenerationPlugin, ChunkManager, LoadPoint};
 
@@ -32,33 +31,17 @@ pub fn setup_loadables(mut loadable_types: ResMut<LoadableTypes>) {
     loadable_types.entities = convert_entity(load_all_entities());
 }
 
-pub fn new_renet_server(mut commands: Commands, ip_res: Res<NetworkIP>) {
-    let port: String = ":25565".to_owned();
-    let server_addr = format!("{}{}", ip_res.0, port).parse().unwrap();
-    // let server_addr = "127.0.0.1:25565".parse().unwrap();
-    let socket = UdpSocket::bind("0.0.0.0:25565").unwrap();
-    let connection_config = server_connection_config();
-    let server_config =
-        ServerConfig::new(16, PROTOCOL_ID, server_addr, ServerAuthentication::Unsecure);
-    let current_time = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
+pub fn new_server(ip_res: Res<NetworkIP>, mut server: ResMut<Server>) {
+    server
+        .start_endpoint(
+            ServerConfigurationData::new(ip_res.0.clone(), 25565, "0.0.0.0".to_string()),
+            certificate::CertificateRetrievalMode::GenerateSelfSigned,
+        )
         .unwrap();
-    commands.insert_resource(
-        RenetServer::new(current_time, server_config, connection_config, socket).unwrap(),
-    );
+    server
+        .endpoint_mut()
+        .set_default_channel(bevy_quinnet::shared::channel::ChannelId::UnorderedReliable);
 }
-
-fn panic_on_error_system(mut renet_error: EventReader<RenetError>) {
-    for e in renet_error.iter() {
-        panic!("{}", e);
-    }
-}
-
-// fn disconnect_clients_on_exit(exit: EventReader<AppExit>, mut server: ResMut<RenetServer>) {
-//     if !exit.is_empty() {
-//         server.disconnect_clients();
-//     }
-// }
 
 pub fn setup_builders(mut commands: Commands) {
     commands.insert_resource(PlayerBundleBuilder {
@@ -71,12 +54,12 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(ChunkGenerationPlugin)
+            .add_plugin(QuinnetServerPlugin::default())
             .add_plugin(NetworkingPlugin)
             .insert_resource(LoadableTypes::default())
             .add_startup_system(setup_loadables)
-            .add_startup_system(new_renet_server)
+            .add_startup_system(new_server)
             .add_startup_system(setup_builders)
-            .add_system(panic_on_error_system)
             .add_startup_system(setup);
     }
 }

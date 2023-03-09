@@ -7,7 +7,7 @@ use std::time::Duration;
 use belly::prelude::*;
 use bevy::prelude::*;
 
-use bevy_renet::RenetClientPlugin;
+use bevy_quinnet::client::QuinnetClientPlugin;
 use bevy_tweening::TweeningPlugin;
 use components::GameState;
 use directories::ProjectDirs;
@@ -35,9 +35,9 @@ fn main() {
                 })
                 .set(ImagePlugin::default_nearest()),
         )
+        .add_plugin(QuinnetClientPlugin::default())
         .add_plugin(BellyPlugin)
         .add_plugin(TweeningPlugin)
-        .add_plugin(RenetClientPlugin::default())
         .add_fixed_timestep_after_stage(
             CoreStage::Update,
             Duration::from_millis(16),

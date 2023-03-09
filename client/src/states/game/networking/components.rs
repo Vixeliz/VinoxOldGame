@@ -2,6 +2,9 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
+#[derive(Resource, Default)]
+pub struct ClientData(pub u64);
+
 #[derive(Component)]
 pub struct ControlledPlayer;
 

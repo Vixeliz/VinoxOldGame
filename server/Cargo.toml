@@ -25,7 +25,7 @@ rpath = false
 
 [dependencies]
 bevy = {workspace=true}
-bevy_renet = {workspace=true}
+bevy_quinnet = {workspace=true}
 bincode = {workspace=true}
 serde = {workspace=true}
 common = {path="../common"}

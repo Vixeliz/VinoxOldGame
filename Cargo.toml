@@ -8,7 +8,8 @@ resolver = "2"
 
 [workspace.dependencies]
 bevy = { version = "0.9.1", features = ["dynamic"] }
-bevy_renet = "0.0.6"
+# bevy_renet = "0.0.6"
+bevy_quinnet = "0.3"
 mlua = { version = "0.8.7", features = ["lua54", "vendored", "serialize"] }
 ron = "0.8.0"
 bevy_rapier3d = "0.20.0"

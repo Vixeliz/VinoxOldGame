@@ -26,7 +26,7 @@ rpath = false
 [dependencies]
 bevy = {workspace = true}
 bevy_rapier3d = {workspace = true}
-bevy_renet = { workspace = true }
+bevy_quinnet = { workspace = true }
 component = "0.1.0"
 serde = {workspace=true}
 mlua = {workspace=true}

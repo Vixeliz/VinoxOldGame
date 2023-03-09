@@ -7,19 +7,10 @@ use bevy::{
     window::CursorGrabMode,
 };
 use bevy_atmosphere::prelude::AtmosphereCamera;
-use bevy_egui::EguiContext;
-use bevy_rapier3d::prelude::{
-    Collider, CollisionGroups, Group, SolverGroups, Vect,
-};
-use bevy_renet::renet::RenetClient;
-use common::{
-    game::world::chunk::{
-        world_to_chunk, ChunkComp, CurrentChunks, LoadableTypes,
-    },
-};
-use renet_visualizer::RenetClientVisualizer;
+use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, SolverGroups, Vect};
+use common::game::world::chunk::{world_to_chunk, ChunkComp, CurrentChunks, LoadableTypes};
 
-use crate::states::game::{networking::components::ControlledPlayer};
+use crate::states::game::networking::components::ControlledPlayer;
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -178,21 +169,5 @@ pub fn movement_input_system(
 
             fps_camera.velocity.y -= 35.0 * time.delta().as_secs_f32().clamp(0.0, 0.1);
         }
-    }
-}
-
-pub fn update_visualizer_system(
-    mut egui_context: ResMut<EguiContext>,
-    mut visualizer: ResMut<RenetClientVisualizer<200>>,
-    client: Res<RenetClient>,
-    mut show_visualizer: Local<bool>,
-    keyboard_input: Res<Input<KeyCode>>,
-) {
-    visualizer.add_network_info(client.network_info());
-    if keyboard_input.just_pressed(KeyCode::F1) {
-        *show_visualizer = !*show_visualizer;
-    }
-    if *show_visualizer {
-        visualizer.show_window(egui_context.ctx_mut());
     }
 }
