@@ -150,7 +150,7 @@ pub fn clear_unloaded_chunks(
 ) {
     for (chunk, entity) in chunks.iter() {
         for load_point in load_points.iter() {
-            if !load_point.is_in_radius(
+            if load_point.is_in_radius(
                 chunk.pos.0,
                 IVec2::new(-view_distance.horizontal, -view_distance.vertical),
                 IVec2::new(view_distance.horizontal, view_distance.vertical),
