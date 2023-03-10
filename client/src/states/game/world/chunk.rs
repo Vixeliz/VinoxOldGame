@@ -218,7 +218,7 @@ pub fn update_borders(
     });
 
     for dirty_chunk in sorted_chunk_positions.iter() {
-        if dirty_chunk_positions.len() > 32 {
+        if dirty_chunk_positions.len() > 100 {
             break;
         }
         dirty_chunk_positions.push(*dirty_chunk);
