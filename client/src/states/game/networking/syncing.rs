@@ -202,8 +202,8 @@ pub fn lerp_new_location(
                 if player_entity.client_entity != *entity {
                     if let Ok(old_transform) = transform_query.get(*entity) {
                         let tween = Tween::new(
-                            EaseFunction::QuadraticInOut,
-                            Duration::from_millis(75),
+                            EaseFunction::QuadraticIn,
+                            Duration::from_millis(25),
                             TransformPositionLens {
                                 start: old_transform.translation,
                                 end: transform.translation,
@@ -211,8 +211,8 @@ pub fn lerp_new_location(
                         )
                         .with_repeat_count(RepeatCount::Finite(1));
                         let tween_rot = Tween::new(
-                            EaseFunction::QuadraticInOut,
-                            Duration::from_millis(75),
+                            EaseFunction::QuadraticIn,
+                            Duration::from_millis(25),
                             TransformRotationLens {
                                 start: old_transform.rotation,
                                 end: transform.rotation,
