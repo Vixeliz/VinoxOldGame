@@ -21,7 +21,7 @@ use crate::{
     systems::despawn_with,
 };
 
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use iyes_loopless::prelude::*;
 
@@ -86,12 +86,15 @@ pub fn switch(
     }
 }
 
-// Move to game state
-// fn disconnect_on_exit(exit: EventReader<AppExit>, mut client: ResMut<RenetClient>) {
-//     if !exit.is_empty() && client.is_connected() {
-//         client.disconnect();
-//     }
-// }
+pub fn timeout(mut commands: Commands, mut timer: Local<Timer>, time: Res<Time>) {
+    timer.set_mode(TimerMode::Repeating);
+    timer.set_duration(Duration::from_secs_f32(5.));
+
+    timer.tick(time.delta());
+    if timer.just_finished() {
+        commands.insert_resource(NextState(GameState::Menu));
+    }
+}
 
 pub fn setup_resources(
     mut commands: Commands,
@@ -207,6 +210,7 @@ impl Plugin for LoadingPlugin {
             .add_system(switch.run_in_state(GameState::Loading))
             .add_enter_system(GameState::Loading, setup_resources)
             .add_system(load_blocks.run_in_state(GameState::Loading))
+            .add_system(timeout.run_in_state(GameState::Loading))
             .add_enter_system(GameState::Loading, load_entities)
             .add_enter_system(GameState::Loading, load_sounds)
             .add_enter_system(GameState::Loading, new_client)
