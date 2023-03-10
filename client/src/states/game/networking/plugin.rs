@@ -6,9 +6,7 @@ use crate::components::GameState;
 
 use super::{
     components::{ClientLobby, NetworkMapping},
-    syncing::{
-        client_send_naive_position, client_sync_players, get_id, lerp_new_location, wait_for_chunks,
-    },
+    syncing::{client_send_naive_position, client_sync_players, get_id, lerp_new_location},
 };
 
 pub struct NetworkingPlugin;
@@ -29,7 +27,6 @@ impl Plugin for NetworkingPlugin {
                 0,
                 client_send_naive_position.run_in_state(GameState::Game),
             )
-            .add_system(lerp_new_location.run_in_state(GameState::Game))
-            .add_system(wait_for_chunks.run_in_state(GameState::Game));
+            .add_system(lerp_new_location.run_in_state(GameState::Game));
     }
 }

@@ -4,6 +4,7 @@ use belly::prelude::*;
 use bevy::prelude::*;
 
 use bevy_quinnet::client::Client;
+use bevy_rapier3d::prelude::Collider;
 use bevy_tweening::{
     lens::{TransformPositionLens, TransformRotationLens},
     *,
@@ -24,11 +25,6 @@ use super::components::{ClientData, ClientLobby, NetworkMapping, PlayerInfo};
 
 #[derive(Component)]
 pub struct HighLightCube;
-
-#[derive(Component)]
-pub struct JustSpawned {
-    timer: Timer,
-}
 
 pub fn get_id(
     mut client: ResMut<Client>,
@@ -87,7 +83,7 @@ pub fn client_sync_players(
                 } => {
                     let mut client_entity = cmd1.spawn_empty();
                     if client_data.0 == id {
-                        println!("You connected.");
+                        println!("You connected at position {}.", translation);
                         cmd2.spawn(PbrBundle {
                             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.001 })),
                             material: materials.add(StandardMaterial {
@@ -102,12 +98,13 @@ pub fn client_sync_players(
                         })
                         .insert(HighLightCube);
 
+                        cmd2.spawn(Collider::cuboid(8.0, 1.0, 8.0))
+                            .insert(Transform::from_xyz(0.0, 115.0, 0.0));
+
                         client_entity
-                            .insert(player_builder.build(translation.into(), id, true))
-                            .insert(ControlledPlayer)
-                            .insert(JustSpawned {
-                                timer: Timer::new(Duration::from_secs(10), TimerMode::Once),
-                            });
+                            .insert(player_builder.build(translation, id, true))
+                            .insert(ControlledPlayer);
+
                         cmd2.add(eml! {
                         <body s:padding="50px" s:margin-left="5px" s:justify-content="flex-start" s:align-items="flex-start">
                             "ChunkPos: "{from!(PlayerChunk:chunk_pos | fmt.c("{c}"))}
@@ -115,10 +112,10 @@ pub fn client_sync_players(
                     });
                     } else {
                         println!("Player {id} connected.");
-                        client_entity.insert(player_builder.build(translation.into(), id, false));
+                        client_entity.insert(player_builder.build(translation, id, false));
                         client_entity.insert(
-                            Transform::from_translation(translation.into())
-                                .with_rotation(Quat::from_vec4(rotation.into())),
+                            Transform::from_translation(translation)
+                                .with_rotation(Quat::from_vec4(rotation)),
                         );
                     }
 
@@ -255,21 +252,3 @@ pub fn client_send_naive_position(
 //         commands.insert_resource(NextState(GameState::Menu));
 //     }
 // }
-
-// TODO: Have a more elegant way to wait on loading section or by actually waiting till all the intial chunks are loaded
-pub fn wait_for_chunks(
-    mut just_spawned_query: Query<(&mut JustSpawned, Entity, &mut Transform)>,
-    time: Res<Time>,
-    mut commands: Commands,
-) {
-    if let Ok((mut just_spawned, entity, mut player_transform)) =
-        just_spawned_query.get_single_mut()
-    {
-        just_spawned.timer.tick(time.delta());
-        if just_spawned.timer.finished() {
-            commands.entity(entity).remove::<JustSpawned>();
-        } else {
-            player_transform.translation = Vec3::new(0.0, 100.0, 0.0);
-        }
-    }
-}

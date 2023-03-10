@@ -41,7 +41,6 @@ impl PlayerBundleBuilder {
         } else {
             self.default_model.clone()
         };
-
         PlayerBundle {
             collider: ColliderBundle {
                 collider: Collider::capsule_y(

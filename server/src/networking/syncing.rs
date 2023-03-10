@@ -10,7 +10,6 @@ use common::{
     },
     networking::components::{ClientMessage, NetworkedEntities, Player, ServerMessage},
 };
-use rand::seq::SliceRandom;
 use rustc_data_structures::stable_set::FxHashSet;
 use zstd::stream::copy_encode;
 
@@ -76,7 +75,7 @@ pub fn server_update_system(
                     }
 
                     // Spawn new player
-                    let transform = Transform::from_xyz(0.0, 200.0, -10.0);
+                    let transform = Transform::from_xyz(0.0, 130.0, 0.0);
                     // let player_entity = commands.spawn((transform, Player { id: *id })).id();
                     let player_entity = commands
                         .spawn(player_builder.build(transform.translation, id, false))
@@ -177,10 +176,7 @@ pub fn send_chunks(
                 let chunk_pos = world_to_chunk(player_transform.translation);
                 let load_point = LoadPoint(chunk_pos);
                 commands.entity(*player_entity).insert(load_point.clone());
-                for chunk in chunk_manager
-                    .get_chunks_around_chunk(chunk_pos, &sent_chunks)
-                    .choose_multiple(&mut rand::thread_rng(), 10)
-                {
+                for chunk in chunk_manager.get_chunks_around_chunk(chunk_pos, &sent_chunks) {
                     let raw_chunk = chunk.chunk_data.clone();
                     if let Ok(raw_chunk_bin) = bincode::serialize(&raw_chunk) {
                         let mut final_chunk = Cursor::new(raw_chunk_bin);

@@ -64,19 +64,16 @@ pub fn spawn_camera(
                 ..default()
             }
         };
-        commands
-            .entity(player_entity)
-            .insert(GlobalTransform::default())
-            .with_children(|c| {
-                c.spawn((
-                    GlobalTransform::default(),
-                    Transform::from_xyz(0.0, 1.0, 0.0),
-                    Collider::cylinder(0.8, 0.2),
-                    SolverGroups::new(Group::GROUP_1, Group::GROUP_2),
-                    CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
-                ));
-                c.spawn((FPSCamera::default(), camera, AtmosphereCamera::default()));
-            });
+        commands.entity(player_entity).with_children(|c| {
+            c.spawn((
+                GlobalTransform::default(),
+                Transform::from_xyz(0.0, 1.0, 0.0),
+                Collider::cylinder(0.8, 0.2),
+                SolverGroups::new(Group::GROUP_1, Group::GROUP_2),
+                CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
+            ));
+            c.spawn((FPSCamera::default(), camera, AtmosphereCamera::default()));
+        });
     }
 }
 
