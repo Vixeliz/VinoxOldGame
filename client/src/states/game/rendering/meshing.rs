@@ -465,18 +465,55 @@ pub struct MeshedChunk {
 #[derive(Component)]
 pub struct ChunkGenTask(Task<MeshedChunk>);
 
+#[derive(Resource, Default)]
+pub struct ChunkMaterial {
+    opaque: Handle<StandardMaterial>,
+    transparent: Handle<StandardMaterial>,
+}
+
+pub fn create_chunk_material(
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut chunk_material: ResMut<ChunkMaterial>,
+    texture_atlas: Res<Assets<TextureAtlas>>,
+    loadable_assets: ResMut<LoadableAssets>,
+) {
+    chunk_material.transparent = materials.add(StandardMaterial {
+        base_color: Color::WHITE,
+        base_color_texture: Some(
+            texture_atlas
+                .get(&loadable_assets.block_atlas)
+                .unwrap()
+                .texture
+                .clone(),
+        ),
+        perceptual_roughness: 1.0,
+        alpha_mode: AlphaMode::Blend,
+        ..default()
+    });
+    chunk_material.opaque = materials.add(StandardMaterial {
+        base_color: Color::WHITE,
+        base_color_texture: Some(
+            texture_atlas
+                .get(&loadable_assets.block_atlas)
+                .unwrap()
+                .texture
+                .clone(),
+        ),
+        perceptual_roughness: 1.0,
+        alpha_mode: AlphaMode::Opaque,
+        ..default()
+    });
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn process_task(
     mut commands: Commands,
     mut chunk_query: Query<(Entity, &mut ChunkGenTask)>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-    texture_atlas: Res<Assets<TextureAtlas>>,
-    loadable_assets: ResMut<LoadableAssets>,
+    chunk_material: Res<ChunkMaterial>,
     current_chunks: ResMut<CurrentChunks>,
     chunks: Query<&Handle<Mesh>>,
 ) {
-    let _block_atlas = texture_atlas.get(&loadable_assets.block_atlas).unwrap();
     for (entity, mut chunk_task) in &mut chunk_query {
         if let Some(chunk) = future::block_on(future::poll_once(&mut chunk_task.0)) {
             if let Some(chunk_entity) = current_chunks.get_entity(chunk.pos) {
@@ -533,20 +570,7 @@ pub fn process_task(
                             },
                             mesh: PbrBundle {
                                 mesh: meshes.add(chunk.transparent_mesh.clone()),
-                                // Create material once this is dumb lol
-                                material: materials.add(StandardMaterial {
-                                    base_color: Color::WHITE,
-                                    base_color_texture: Some(
-                                        texture_atlas
-                                            .get(&loadable_assets.block_atlas)
-                                            .unwrap()
-                                            .texture
-                                            .clone(),
-                                    ),
-                                    perceptual_roughness: 1.0,
-                                    alpha_mode: AlphaMode::Blend,
-                                    ..default()
-                                }),
+                                material: chunk_material.transparent.clone(),
                                 ..Default::default()
                             },
                         },
@@ -572,19 +596,7 @@ pub fn process_task(
                         },
                         mesh: PbrBundle {
                             mesh: meshes.add(chunk.chunk_mesh.clone()),
-                            material: materials.add(StandardMaterial {
-                                base_color: Color::WHITE,
-                                base_color_texture: Some(
-                                    texture_atlas
-                                        .get(&loadable_assets.block_atlas)
-                                        .unwrap()
-                                        .texture
-                                        .clone(),
-                                ),
-                                perceptual_roughness: 1.0,
-                                alpha_mode: AlphaMode::Opaque,
-                                ..default()
-                            }),
+                            material: chunk_material.opaque.clone(),
                             transform: Transform::from_translation(chunk_pos),
                             ..Default::default()
                         },
