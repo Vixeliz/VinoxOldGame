@@ -51,7 +51,9 @@ pub fn server_update_system(
     mut lobby: ResMut<ServerLobby>,
     mut players: Query<(Entity, &Player, &Transform, &mut SentChunks)>,
     player_builder: Res<PlayerBundleBuilder>,
-    _chunk_manager: ChunkManager,
+    mut chunks: Query<&mut ChunkComp>,
+    current_chunks: Res<CurrentChunks>,
+    database: Res<WorldDatabase>,
 ) {
     let endpoint = server.endpoint_mut();
     for client_id in endpoint.clients() {
@@ -109,6 +111,33 @@ pub fn server_update_system(
                             Transform::from_translation(player_pos)
                                 .with_rotation(Quat::from_vec4(player_rot)),
                         );
+                    }
+                }
+
+                ClientMessage::SentBlock {
+                    chunk_pos,
+                    voxel_pos,
+                    block_type,
+                } => {
+                    if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos.into()) {
+                        if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
+                            chunk.chunk_data.add_block_state(&block_type);
+                            chunk.chunk_data.set_block(
+                                UVec3::new(
+                                    voxel_pos[0] as u32,
+                                    voxel_pos[1] as u32,
+                                    voxel_pos[2] as u32,
+                                ),
+                                block_type.clone(),
+                            );
+                            let data = database.connection.lock().unwrap();
+                            insert_chunk(chunk.pos.0, &chunk.chunk_data, &data);
+                            endpoint.try_broadcast_message(ServerMessage::SentBlock {
+                                chunk_pos,
+                                voxel_pos,
+                                block_type,
+                            });
+                        }
                     }
                 }
                 _ => {}
@@ -172,53 +201,12 @@ pub fn send_chunks(
     }
 }
 
-pub fn block_sync(
-    mut server: ResMut<Server>,
-    mut chunks: Query<&mut ChunkComp>,
-    current_chunks: Res<CurrentChunks>,
-    database: Res<WorldDatabase>,
-) {
-    let endpoint = server.endpoint_mut();
-    for client_id in endpoint.clients() {
-        while let Some(message) = endpoint.try_receive_message_from::<ClientMessage>(client_id) {
-            if let ClientMessage::SentBlock {
-                chunk_pos,
-                voxel_pos,
-                block_type,
-            } = message
-            {
-                if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos.into()) {
-                    if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
-                        chunk.chunk_data.add_block_state(&block_type);
-                        chunk.chunk_data.set_block(
-                            UVec3::new(
-                                voxel_pos[0] as u32,
-                                voxel_pos[1] as u32,
-                                voxel_pos[2] as u32,
-                            ),
-                            block_type.clone(),
-                        );
-                        let data = database.connection.lock().unwrap();
-                        insert_chunk(chunk.pos.0, &chunk.chunk_data, &data);
-                        endpoint.try_broadcast_message(ServerMessage::SentBlock {
-                            chunk_pos,
-                            voxel_pos,
-                            block_type,
-                        });
-                    }
-                }
-            }
-        }
-    }
-}
-
 pub struct NetworkingPlugin;
 
 impl Plugin for NetworkingPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(server_update_system)
             .add_fixed_timestep_system("network_update", 0, server_network_sync)
-            .add_fixed_timestep_system("network_update", 0, block_sync)
             .add_fixed_timestep_system("network_update", 0, connections)
             .add_fixed_timestep_system("network_update", 0, send_chunks)
             .insert_resource(ServerLobby::default());
