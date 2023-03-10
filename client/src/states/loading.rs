@@ -39,6 +39,7 @@ pub fn new_client(ip_res: Res<NetworkIP>, mut client: ResMut<Client>) {
         .unwrap();
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn switch(
     mut commands: Commands,
     mut client: ResMut<Client>,

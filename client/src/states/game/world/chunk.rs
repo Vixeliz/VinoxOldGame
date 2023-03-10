@@ -264,7 +264,6 @@ pub fn update_borders(
                     for z in 0..=CHUNK_BOUND {
                         for y in 0..=CHUNK_BOUND {
                             for x in 0..=CHUNK_BOUND {
-                                let (x, y, z) = (x as u32, y as u32, z as u32);
                                 match (x, y, z) {
                                     (1..=CHUNK_SIZE, CHUNK_BOUND, 1..=CHUNK_SIZE) => {
                                         let block_string = chunk_data_cloned[2]

@@ -87,7 +87,7 @@ pub fn server_update_system(
                     lobby.players.insert(id, player_entity);
 
                     endpoint.try_broadcast_message(&ServerMessage::PlayerCreate {
-                        id: id,
+                        id,
                         entity: player_entity,
                         translation: transform.translation,
                         rotation: Vec4::from(transform.rotation),
@@ -99,7 +99,7 @@ pub fn server_update_system(
                         commands.entity(player_entity).despawn();
                     }
 
-                    endpoint.try_broadcast_message(&ServerMessage::PlayerRemove { id: id });
+                    endpoint.try_broadcast_message(&ServerMessage::PlayerRemove { id });
                 }
                 ClientMessage::Position {
                     player_pos,
@@ -118,7 +118,7 @@ pub fn server_update_system(
                     voxel_pos,
                     block_type,
                 } => {
-                    if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos.into()) {
+                    if let Some(chunk_entity) = current_chunks.get_entity(chunk_pos) {
                         if let Ok(mut chunk) = chunks.get_mut(chunk_entity) {
                             chunk.chunk_data.add_block_state(&block_type);
                             chunk.chunk_data.set_block(

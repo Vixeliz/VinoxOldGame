@@ -88,7 +88,7 @@ pub fn client_sync_players(
                 } => {
                     let mut client_entity = cmd1.spawn_empty();
                     if client_data.0 == id {
-                        println!("You connected at position {}.", translation);
+                        println!("You connected.");
                         cmd2.spawn(PbrBundle {
                             mesh: meshes.add(Mesh::from(shape::Cube { size: 1.001 })),
                             material: materials.add(StandardMaterial {
@@ -150,7 +150,7 @@ pub fn client_sync_players(
                     voxel_pos,
                     block_type,
                 } => block_event.send(SetBlockEvent {
-                    chunk_pos: chunk_pos.into(),
+                    chunk_pos,
                     voxel_pos: UVec3::new(
                         voxel_pos[0] as u32,
                         voxel_pos[1] as u32,
@@ -169,7 +169,7 @@ pub fn client_sync_players(
                     let level_data: RawChunk = bincode::deserialize(temp_output.get_ref()).unwrap();
                     chunk_event.send(CreateChunkEvent {
                         raw_chunk: level_data,
-                        pos: pos.into(),
+                        pos,
                     });
                 }
                 _ => {}
@@ -191,8 +191,8 @@ pub fn lerp_new_location(
             .0
             .get(&entity_buffer.entities[0].entities[i])
         {
-            let translation = Vec3::from(entity_buffer.entities[0].translations[i]);
-            let rotation = Quat::from_vec4(entity_buffer.entities[0].rotations[i].into());
+            let translation = entity_buffer.entities[0].translations[i];
+            let rotation = Quat::from_vec4(entity_buffer.entities[0].rotations[i]);
             let transform = Transform {
                 translation,
                 ..Default::default()

@@ -114,7 +114,7 @@ pub fn interact(
                                 chunk.chunk_data.set_block(pos.1, item_string.to_string());
                                 client.connection_mut().try_send_message(
                                     ClientMessage::SentBlock {
-                                        chunk_pos: pos.0.into(),
+                                        chunk_pos: pos.0,
                                         voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
                                         block_type: item_string.to_string(),
                                     },
@@ -125,7 +125,7 @@ pub fn interact(
                             client
                                 .connection_mut()
                                 .try_send_message(ClientMessage::SentBlock {
-                                    chunk_pos: pos.0.into(),
+                                    chunk_pos: pos.0,
                                     voxel_pos: [pos.1.x as u8, pos.1.y as u8, pos.1.z as u8],
                                     block_type: "air".to_string(),
                                 });
